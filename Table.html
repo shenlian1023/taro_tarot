@@ -43,6 +43,15 @@
       perspective: 1000px;
       cursor: pointer;
       transform-origin: bottom center;
+      transform: translateY(var(--left))  rotate(var(--angle));
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    /* 抽牌前 hover 效果 */
+    .card.hoverable:hover {
+      transform: translateY(-30px) rotate(var(--angle)) scale(1.04);
+      z-index: 150;
+      filter: brightness(1.15);
     }
 
     .card-inner {
@@ -128,6 +137,7 @@
       ];
 
       let selectedCards = [];   // 翻到的牌的編號
+      let selectedOrientations = [];     // 翻到的牌的正逆位 -> 1: 正 ; 0 -> 逆 
       
 
       for (let i = 0; i < CARD_COUNT; i++) {
@@ -161,7 +171,10 @@
 
         card.style.left = `${x}px`;
         card.style.top = `${y}px`;
-        card.style.transform = `rotate(${angle}deg)`;
+        card.style.setProperty('--angle', `${angle}deg`);
+        card.style.setProperty('--left', '0px');
+        // card.style.transform = `rotate(${angle}deg)`;
+        card.classList.add('hoverable');
 
 
 
@@ -172,7 +185,16 @@
           if (selectedCount >= 3){
               return;
           }
+          card.classList.remove('hoverable'); // ← 關 hover
           card.classList.add('flipped');
+
+          // 決定正逆位
+          const isUpright = Math.random() < 0.5 ? 1:0;  // 1 -> 正 ; 0 -> 逆
+          selectedOrientations.push(isUpright);
+          if (isUpright === 0){   // 逆位旋轉 180 degree
+            front.style.transform = 'rotateY(180deg) rotateZ(180deg)';
+          }
+
 
           const pos = selectedPositions[selectedCount];
           card.style.left = `${pos.x}px`;
@@ -182,7 +204,7 @@
           card.style.zIndex = 200 + selectedCount;
 
           // 記錄牌的編號
-          selectedCards.push(i + 1);  //  1 ~ 78
+          selectedCards.push(i);  //  id: 0 ~ 77
 
 
           // 第一次點牌時隱藏標題
