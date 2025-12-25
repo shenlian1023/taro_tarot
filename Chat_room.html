@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>聊天室 + 抽牌示範</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      background: radial-gradient(circle at center, #1c1c2b, #000);
+    }
+    #chat-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 700px;
+      height: 800px;
+      border-radius: 10px;
+      border: 1.5px solid rgba(244, 239, 209, 0.7);
+      box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 10px rgba(255, 215, 0, 0.2);
+      background: radial-gradient(circle at center, #1c1c2b, #000);
+      background-size: cover;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+    #chat-container > * {
+      position: relative;
+      z-index: 2; /* 文字和按鈕比覆蓋層高 */
+    }
+    #messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      justify-content: flex-start;
+      align-items: stretch;
+    }
+    #messages::-webkit-scrollbar{
+      width: 6px;
+    }
+    #messages::-webkit-scrollbar-thumb {
+      background: rbga(255, 125, 0, 0.3);
+      border-radius: 10px;
+    }
+    .message {   /* 訊息氣泡 */
+      max-width: 80%;
+      padding: 10px 15px;
+      border-radius: 15px;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+    .message.ai {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-bottom-left-radius: 2px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #b8860b, #ffd700);
+      color: #000;
+      border-bottom-right-radius: 2px;
+      font-weight: bold;
+    }
+    #input-area {
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      display: flex;
+      gap: 10px;
+      border-top: 1px solid rgba(255, 215, 0, 0.3);
+    }
+    #user-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 5px;
+      padding: 10px;
+      color: #fff;
+      outline: none;
+    }
+    #send-btn {
+      background: gold;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      padding: 0 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #controls {
+      padding: 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    #table-fullscreen {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      z-index: 100;
+    }
+    #back-button {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 20px; 
+      padding: 10px 15px;
+      background-color: rgba(0,0,0,0.7); 
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 101;
+      font-size: 16px;
+    }
+    #draw-card {
+      position: fixed;
+      top: 50%;              
+      right: 50px;           
+      transform: translateY(-50%);
+      /* 大小按鈕形狀 */
+      padding: 20px 40px;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      color: #1c1c2b; /* 深色文字與金色背景形成對比 */
+      background: linear-gradient(135deg, #ffd700, #b8860b, #ffd700);
+      background-size: 200% auto;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50px;
+      box-shadow: 0 0 20px rgba(184, 134, 11, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      z-index: 11;
+      transition: all 0.4s ease;
+      outline: none;
+      text-transform: uppercase;
+    }
+    #draw-card:hover {
+      background-color: rgba(255, 255, 255, 0.4);
+    }
+    #card-container {
+      position: fixed;    /* 固定在螢幕 */
+      top: 0;             /* 從頂部開始計算 */
+      left: 60px;         /* 距離左邊 px */
+      height: 100vh;      /* 佔滿全螢幕高度 */
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* 讓卡牌在左側垂直置中 */
+      gap: 10px;
+      z-index: 1000;      /* 確保在最前面 */
+      pointer-events: none; /* 讓容器不擋住後面的點擊 */
+    }
+    #card-container img {
+      pointer-events: auto; 
+      width: 140px;
+      height: auto;
+      max-height: 28vh;         
+      object-fit: contain;
+      border: 2px solid #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    #messages {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; 
+      align-items: center;
+      text-align: center;
+    }
+    #message p {
+      font-size: 24px;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(255, 125, 0, 0.5);
+      margin: 0;
+    }
+  </style>
+</head>
+
+
+<body>
+
+<!--  畫面左邊放牌  -->
+<div id="card-container"></div>
+
+<!-- 聊天室 -->
+<div id="chat-container">
+  <div id="messages">
+    <div class="message ai">你在煩惱什麼呢？</div>
+  </div>
+
+  <div id="input-area">
+    <input type="text" id="user-input" placeholder="你想告訴我什麼呢？" autocomplete="off">
+    <button id="send-btn">發送</button>
+  </div>
+</div>
+
+<!-- 抽牌按鈕 -->
+<button id="draw-card">抽牌</button> 
+
+<!-- 全螢幕 Table.html -->
+<iframe id="table-fullscreen" src=""></iframe>
+<button id="back-button">占卜一下</button>
+
+<script>
+function showChat(){
+  document.getElementById('chat-container').style.display = 'flex';
+  tableFrame.style.display = 'none';
+  tableFrame.src = '';
+  backBtn.style.display = 'none';
+}
+
+const chat = document.getElementById('chat-container');
+const tableFrame = document.getElementById('table-fullscreen');
+const backBtn = document.getElementById('back-button');
+const cardContainer = document.getElementById('card-container');
+
+// Chatting 
+const msgContainer = document.getElementById('messages');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+function appendMessage(role, text) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `message ${role}`;
+  msgDiv.innerText = text;
+  msgContainer.appendChild(msgDiv);
+
+  // 自動捲動到底部
+  msgContainer.scrollTop = msgContainer.scrollHeight;
+}
+sendBtn.addEventListener('click', () => {
+  const text = userInput.value.trim();
+  if (text) {
+    appendMessage('user', text);
+    userInput.value = '';
+    
+    // 回覆區
+    setTimeout(() => {
+      appendMessage('ai', '我收到了您的困惑，但是我還沒辦法回答您的問題');
+    }, 1000);
+  }
+});
+
+// 按 Enter 也可以發訊息
+userInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') sendBtn.click();
+});
+
+
+document.getElementById('draw-card').addEventListener('click', ()=>{
+  // 隱藏聊天室
+  chat.style.display = 'none';
+
+  // 顯示 Table.html 滿版
+  tableFrame.src = 'Table.html'; // 指向你的完整 Table.html
+  tableFrame.style.display = 'block';
+  
+  // 顯示返回按鈕
+  backBtn.style.display = 'block'; 
+
+  // 隱藏抽出的牌
+  cardContainer.innerHTML = '';
+
+});
+backBtn.addEventListener('click', () => {
+  try {
+    // 1. 先從 iframe 取得資料
+    const iframeWindow = tableFrame.contentWindow;
+    const selectedCards = iframeWindow.selectedCards || [];
+    const selectedOrientations = iframeWindow.selectedOrientations || [];
+
+    // 2. 只有在抓到資料時才更新容器
+    if (selectedCards.length > 0) {
+      cardContainer.innerHTML = ''; // 清空舊的
+      selectedCards.forEach((num, index) => {
+        const img = document.createElement('img');
+        img.src = `Cards/${num + 1}.jpeg`; 
+        if (selectedOrientations[index] === 0) {  // 正逆位
+          img.style.transform = 'rotate(180deg)';
+          img.style.boxShadow = '0 -4px 15px rgba(0,0,0,0.5)'; 
+        }
+        cardContainer.appendChild(img);
+      });
+    }
+  } catch (e) {
+    console.error("無法從 iframe 讀取資料，請確認是否跨網域或 Table.html 內有宣告 selectedCards", e);
+  }
+
+  // 3. 最後再切換 UI 狀態
+  tableFrame.style.display = 'none';
+  tableFrame.src = ''; 
+  backBtn.style.display = 'none';
+  chat.style.display = 'flex';
+  });
+
+
+</script>
+
+</body>
+</html>
