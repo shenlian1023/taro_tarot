@@ -115,6 +115,7 @@
         <input type="text" id="chatInput" placeholder="你在煩惱什麼呢？" 
                style="width:300px; padding:8px; font-size:16px; pointer-events:auto;">
         <button id="chatSend" style="padding:8px 16px; font-size:16px; pointer-events:auto;">！求解！</button>
+        <button id="resetBtn" style = "margin-top: 24px; padding: 10px 20px; font-size: 16px; cursor: pointer; display: none;"> 重新抽牌 </button>
     </div>
 
   </div>
@@ -176,6 +177,11 @@
         // card.style.transform = `rotate(${angle}deg)`;
         card.classList.add('hoverable');
 
+        // 儲存卡牌原始位置
+        card.dataset.initLeft = `${x}px`;
+        card.dataset.initTop = `${y}px`;
+        card.dataset.initAngle = `${angle}deg`;
+
 
 
         card.addEventListener('click', () => {
@@ -233,12 +239,50 @@
             chat.style.opacity = '0';
             setTimeout(() => chat.style.transition = 'opacity 0.5s', 50);
             setTimeout(() => chat.style.opacity = '1', 100);
+
+            // 顯示再抽牌按鈕
+            document.getElementById('resetBtn').style.display = 'inline-block';
+            chat.style.display = 'block';
+            chat.style.pointerEvents = 'auto';
           }
 
         });
 
         table.appendChild(card);
       }
+
+      // 重置抽牌畫面
+      const resetBtn = document.getElementById('resetBtn');
+      resetBtn.addEventListener('click', () => {
+        // 重置狀態
+        selectedCount = 0;
+        selectedCards = [];
+        selectedOrientations = [];
+
+        // 回覆標題
+        title.style.opacity = '1';
+
+        // 隱藏對話框
+        const chat = document.getElementById('chatContainer');
+        chat.style.display = 'none';
+
+        // 隱藏重新抽牌按鈕
+        resetBtn.style.display = 'none';
+
+        // 重置卡牌
+        const cards = document.querySelectorAll('.card');
+        cards.forEach (card => {
+          card.style.opacity = '1';
+          card.classList.add('hoverable');
+          card.classList.remove('flipped');
+          card.style.left = card.dataset.initLeft;
+          card.style.top = card.dataset.initTop;
+          card.style.transform = `rotate(${card.dataset.initAngle})`;
+          card.style.zIndex = '';
+          const front = card.querySelector('.card-front');
+          front.style.transform = 'rotateY(180deg)';
+        });
+      }); 
   </script>
 
 </body>
