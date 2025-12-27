@@ -16,7 +16,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 700px;
+      width: 800px;
       height: 800px;
       border-radius: 10px;
       border: 1.5px solid rgba(244, 239, 209, 0.7);
@@ -69,35 +69,56 @@
 
     .message.user {
       align-self: flex-end;
-      background: linear-gradient(135deg, #b8860b, #ffd700);
+      background: #ffd700;
       color: #000;
       border-bottom-right-radius: 2px;
       font-weight: bold;
     }
     #input-area {
-      padding: 15px;
-      background: rgba(0, 0, 0, 0.3);
+      padding: 20px 25px;
+      background: rgba(0, 0, 0, 0.4);
       display: flex;
-      gap: 10px;
+      gap: 15px;
       border-top: 1px solid rgba(255, 215, 0, 0.3);
+      align-items: center;
     }
     #user-input {
       flex: 1;
+      height: 40px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 215, 0, 0.3);
-      border-radius: 5px;
+      border-radius: 8px;
       padding: 10px;
       color: #fff;
+      font-size: 16px;
+      letter-spacing: 1px;
       outline: none;
+      transition: all 0.3s ease;
+    }
+    #user-input:focus{
+      border-color: #ffd700;
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
     }
     #send-btn {
-      background: gold;
-      color: #000;
+      height: 52px;
+      padding: 0 25px;
+      background: linear-gradient(135deg, #ffd700, #b8860b);
+      color: #1a1a2e;
       border: none;
-      border-radius: 5px;
-      padding: 0 20px;
+      border-radius: 8px;
       font-weight: bold;
+      font-size: 16px;
       cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    #send-btn:hover{
+      filter: brightness(1.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    #send-btn:active{
+      transform: translateY(0);
     }
     #controls {
       padding: 10px;
@@ -108,7 +129,7 @@
       padding: 5px 10px;
       cursor: pointer;
     }
-    #table-fullscreen {
+    #tableFrame {
       display: none;
       position: fixed;
       top: 0;
@@ -135,32 +156,46 @@
     #draw-card {
       position: fixed;
       top: 50%;              
-      right: 50px;           
+      right: 100px;           
       transform: translateY(-50%);
-      /* 大小按鈕形狀 */
+      width: 150px;
+      height: 80px;
       padding: 20px 40px;
       font-size: 20px;
       font-weight: bold;
       letter-spacing: 3px;
-      color: #1c1c2b; /* 深色文字與金色背景形成對比 */
-      background: linear-gradient(135deg, #ffd700, #b8860b, #ffd700);
+      color: #1c1c2b; 
+      background: linear-gradient(135deg, #ffd700, #c8a03a, #ffd700);
       background-size: 200% auto;
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      border-radius: 50px;
-      box-shadow: 0 0 20px rgba(184, 134, 11, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(212, 175, 55, 0.4);
       cursor: pointer;
       z-index: 11;
       transition: all 0.4s ease;
       outline: none;
       text-transform: uppercase;
+      animation: pulse-gold 3s infinite;
     }
     #draw-card:hover {
-      background-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-55%) scale(1.05); /* 稍微往上飄一點點 */
+      background-position: right center;
+      box-shadow: 0 12px 25px rgba(0, 0, 0, 0.6), 
+                  0 0 30px rgba(255, 215, 0, 0.6);
+      color: #000;
+    }
+    #draw-card:active {
+      transform: translateY(-50%) scale(0.98);
+    }
+    @keyframes pulse-gold{
+      0% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+      50% { box-shadow: 0 0 30px rgba(212, 175, 55, 0.7); }
+      100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
     }
     #card-container {
       position: fixed;    /* 固定在螢幕 */
       top: 0;             /* 從頂部開始計算 */
-      left: 60px;         /* 距離左邊 px */
+      left: 80px;         /* 距離左邊 px */
       height: 100vh;      /* 佔滿全螢幕高度 */
       display: flex;
       flex-direction: column;
@@ -212,7 +247,7 @@
 
   <div id="input-area">
     <input type="text" id="user-input" placeholder="你想告訴我什麼呢？" autocomplete="off">
-    <button id="send-btn">發送</button>
+    <button id="send-btn">Q</button>
   </div>
 </div>
 
@@ -220,7 +255,7 @@
 <button id="draw-card">抽牌</button> 
 
 <!-- 全螢幕 Table.html -->
-<iframe id="table-fullscreen" src=""></iframe>
+<iframe id="tableFrame" src=""></iframe>
 <button id="back-button">占卜一下</button>
 
 <script>
@@ -232,7 +267,7 @@ function showChat(){
 }
 
 const chat = document.getElementById('chat-container');
-const tableFrame = document.getElementById('table-fullscreen');
+const tableFrame = document.getElementById('tableFrame');
 const backBtn = document.getElementById('back-button');
 const cardContainer = document.getElementById('card-container');
 
@@ -240,6 +275,18 @@ const cardContainer = document.getElementById('card-container');
 const msgContainer = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
+async function callTarotAI(text, cards, orientations) {
+  console.log("🔮 啟動塔羅占卜模式");
+  // 這裡放入你原本的塔羅 AI 模組邏輯
+  // 範例：return await tarotModule.analyze(text, cards, orientations);
+  return `（塔羅解牌）感應到您的問題「${text}」，針對編號 ${cards.join(', ')} 的牌陣...`;
+}
+async function callNormalAI(text) {
+  console.log("💬 啟動一般對話模式");
+  // 這裡放入你的一般 AI 模組邏輯
+  // 範例：return await normalAI.chat(text);
+  return `（一般對話）您好！關於「${text}」，在您抽牌之前，我有什麼可以先幫您的嗎？`;
+}
 function appendMessage(role, text) {
   const msgDiv = document.createElement('div');
   msgDiv.className = `message ${role}`;
@@ -249,20 +296,41 @@ function appendMessage(role, text) {
   // 自動捲動到底部
   msgContainer.scrollTop = msgContainer.scrollHeight;
 }
-sendBtn.addEventListener('click', () => {
+sendBtn.addEventListener('click', async () => {
   const text = userInput.value.trim();
-  if (text) {
-    appendMessage('user', text);
-    userInput.value = '';
-    
-    // 回覆區
-    setTimeout(() => {
-      appendMessage('ai', '我收到了您的困惑，但是我還沒辦法回答您的問題');
-    }, 1000);
-  }
-});
+  if (!text) return;
 
-// 按 Enter 也可以發訊息
+  // 1. 立即顯示使用者訊息
+  appendMessage('user', text);
+  userInput.value = '';
+
+  // 2. 取得 iframe 內的牌組數據
+  const iframeWin = document.getElementById('tableFrame').contentWindow;
+  const cards = iframeWin.selectedCards || [];
+  const orientations = iframeWin.selectedOrientations || [];
+
+  // 3. 顯示「思考中」狀態
+  appendMessage('ai', '我現在還沒回答你的問題');
+
+  // --- 關鍵修改：使用 setTimeout 確保 UI 先渲染 ---
+  setTimeout(async () => {
+    let aiResponse;
+    try {
+      if (cards.length >= 3) {
+        aiResponse = await callTarotAI(text, cards, orientations);
+      } else {
+        aiResponse = await callNormalAI(text);
+      }
+    } catch (error) {
+      aiResponse = "能量感應中斷...";
+    }
+
+    // 4. 移除思考中，顯示回覆
+    msgContainer.removeChild(loadingDiv);
+    appendMessage('ai', aiResponse);
+  }, 50); // 延遲 50 毫秒給瀏覽器更新畫面
+});
+// Enter 也可以送出訊息
 userInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') sendBtn.click();
 });
