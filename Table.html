@@ -260,7 +260,7 @@
 
           // 決定正逆位
           const isUpright = Math.random() < 0.5 ? 1:0;  // 1 -> 正 ; 0 -> 逆
-          selectedOrientations.push(isUpright);
+          window.selectedOrientations.push(isUpright);
           if (isUpright === 0){   // 逆位旋轉 180 degree
             front.style.transform = 'rotateY(180deg) rotateZ(180deg)';
           }
@@ -274,7 +274,7 @@
           card.style.zIndex = 200 + selectedCount;
 
           // 記錄牌的編號
-          selectedCards.push(i);  //  id: 0 ~ 77
+          window.selectedCards.push(i);  //  id: 0 ~ 77
 
 
           // 第一次點牌時隱藏標題
@@ -320,8 +320,8 @@
       resetBtn.addEventListener('click', () => {
         // 重置狀態
         selectedCount = 0;
-        selectedCards = [];
-        selectedOrientations = [];
+        window.selectedCards = [];
+        window.selectedOrientations = [];
 
         // 回覆標題
         title.style.opacity = '1';

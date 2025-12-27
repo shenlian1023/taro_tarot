@@ -275,17 +275,15 @@ const cardContainer = document.getElementById('card-container');
 const msgContainer = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
-async function callTarotAI(text, cards, orientations) {
-  console.log("🔮 啟動塔羅占卜模式");
-  // 這裡放入你原本的塔羅 AI 模組邏輯
-  // 範例：return await tarotModule.analyze(text, cards, orientations);
-  return `（塔羅解牌）感應到您的問題「${text}」，針對編號 ${cards.join(', ')} 的牌陣...`;
+// Astrologer
+function callTarotAI(text, cards, orientations) {
+  return '塔羅塔羅水晶球';
+  // return `（塔羅解牌）感應到您的問題「${text}」，針對編號 ${cards.join(', ')} 的牌陣...`;
 }
-async function callNormalAI(text) {
-  console.log("💬 啟動一般對話模式");
-  // 這裡放入你的一般 AI 模組邏輯
-  // 範例：return await normalAI.chat(text);
-  return `（一般對話）您好！關於「${text}」，在您抽牌之前，我有什麼可以先幫您的嗎？`;
+// Ollama
+function callNormalAI(text) {
+  return '現在是羊駝在說話';
+  // return `（一般對話）您好！關於「${text}」，在您抽牌之前，我有什麼可以先幫您的嗎？`;
 }
 function appendMessage(role, text) {
   const msgDiv = document.createElement('div');
@@ -297,6 +295,7 @@ function appendMessage(role, text) {
   msgContainer.scrollTop = msgContainer.scrollHeight;
 }
 sendBtn.addEventListener('click', async () => {
+
   const text = userInput.value.trim();
   if (!text) return;
 
@@ -310,25 +309,21 @@ sendBtn.addEventListener('click', async () => {
   const orientations = iframeWin.selectedOrientations || [];
 
   // 3. 顯示「思考中」狀態
-  appendMessage('ai', '我現在還沒回答你的問題');
+  appendMessage('ai', '感應中...')
 
-  // --- 關鍵修改：使用 setTimeout 確保 UI 先渲染 ---
-  setTimeout(async () => {
-    let aiResponse;
-    try {
+  try {
       if (cards.length >= 3) {
-        aiResponse = await callTarotAI(text, cards, orientations);
+        aiResponse = callTarotAI(text, cards, orientations);
+        appendMessage('ai', aiResponse);
       } else {
-        aiResponse = await callNormalAI(text);
+        aiResponse = callNormalAI(text);
+        appendMessage('ai', aiResponse);
       }
     } catch (error) {
       aiResponse = "能量感應中斷...";
+      appendMessage('ai', '能量中斷');
     }
 
-    // 4. 移除思考中，顯示回覆
-    msgContainer.removeChild(loadingDiv);
-    appendMessage('ai', aiResponse);
-  }, 50); // 延遲 50 毫秒給瀏覽器更新畫面
 });
 // Enter 也可以送出訊息
 userInput.addEventListener('keypress', (e) => {
@@ -377,7 +372,7 @@ backBtn.addEventListener('click', () => {
 
   // 3. 最後再切換 UI 狀態
   tableFrame.style.display = 'none';
-  tableFrame.src = ''; 
+  // tableFrame.src = ''; 
   backBtn.style.display = 'none';
   chat.style.display = 'flex';
   });
