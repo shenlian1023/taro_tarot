@@ -43,7 +43,8 @@
       flex-direction: column;
       gap: 15px;
       justify-content: flex-start;
-      align-items: stretch;
+      align-items: flex-start;
+      text-align: left;
     }
     #messages::-webkit-scrollbar{
       width: 6px;
@@ -58,6 +59,8 @@
       border-radius: 15px;
       line-height: 1.5;
       word-wrap: break-word;
+      text-align: left;
+      display: inline-block;
     }
     .message.ai {
       align-self: flex-start;
@@ -73,6 +76,7 @@
       color: #000;
       border-bottom-right-radius: 2px;
       font-weight: bold;
+      text-align: right
     }
     #input-area {
       padding: 20px 25px;
@@ -84,7 +88,9 @@
     }
     #user-input {
       flex: 1;
-      height: 40px;
+      height: 32px;
+      min-height: 32px;      /* 預設高度 */
+      max-height: 100px;     /* 最高長到三行左右 */
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 215, 0, 0.3);
       border-radius: 8px;
@@ -93,7 +99,11 @@
       font-size: 16px;
       letter-spacing: 1px;
       outline: none;
-      transition: all 0.3s ease;
+      transition: border-color 0.3s ease;
+      resize: none;          /* 禁用右下角的手動拉伸 */
+      overflow-y: auto;      /* 超過三行時顯示捲軸 */
+      font-family: inherit;  /* 繼承字體 */
+      line-height: 1.5;      /* 設定行高以便計算 */
     }
     #user-input:focus{
       border-color: #ffd700;
@@ -246,7 +256,7 @@
   </div>
 
   <div id="input-area">
-    <input type="text" id="user-input" placeholder="你想告訴我什麼呢？" autocomplete="off">
+    <textarea id="user-input" placeholder="你想告訴我什麼呢？" autocomplete="off" rows="1"></textarea>
     <button id="send-btn">Q</button>
   </div>
 </div>
@@ -275,15 +285,50 @@ const cardContainer = document.getElementById('card-container');
 const msgContainer = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
+
 // Astrologer
-function callTarotAI(text, cards, orientations) {
-  return '塔羅塔羅水晶球';
-  // return `（塔羅解牌）感應到您的問題「${text}」，針對編號 ${cards.join(', ')} 的牌陣...`;
+async function callTarotAI(text, cards, orientations) {
+  appendMessage('ai', '塔羅塔羅水晶球')
+
+  try {
+    // 呼叫 Python 後端
+    let response = await fetch('http://localhost:5000/analyze_tarot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: text,
+        card_ids: cards,        
+        orientations: orientations 
+      })
+    });
+
+    // response = await fetch('outputs/tarot_api_output.json')
+    response = await fetch(`outputs/tarot_api_output.json?t=${Date.now()}`);
+    const data = await response.json();
+    
+    // 2. 依序顯示 dialogue (解牌內容)
+    for (const msg of data.dialogue) {
+        appendMessage('ai', msg);
+        // 停頓 1.5 秒讓使用者有時間閱讀
+        await new Promise(r => setTimeout(r, 1500)); 
+    }
+
+
+    // 3. 依序顯示 actions (行動建議)
+    for (const msg of data.actions) {
+        appendMessage('ai', msg);
+        await new Promise(r => setTimeout(r, 1200)); 
+    }
+
+    return "占卜結束。"; // 回傳給主邏輯的最後訊息
+  } catch (error) {
+    console.error("API 連線失敗:", error);
+    return "能量感應失敗，請確認後端伺服器已啟動。";
+  }
 }
 // Ollama
-function callNormalAI(text) {
+async function callNormalAI(text) {
   return '現在是羊駝在說話';
-  // return `（一般對話）您好！關於「${text}」，在您抽牌之前，我有什麼可以先幫您的嗎？`;
 }
 function appendMessage(role, text) {
   const msgDiv = document.createElement('div');
@@ -299,37 +344,53 @@ sendBtn.addEventListener('click', async () => {
   const text = userInput.value.trim();
   if (!text) return;
 
-  // 1. 立即顯示使用者訊息
   appendMessage('user', text);
   userInput.value = '';
 
-  // 2. 取得 iframe 內的牌組數據
-  const iframeWin = document.getElementById('tableFrame').contentWindow;
+  const iframeWin = tableFrame.contentWindow;
   const cards = iframeWin.selectedCards || [];
   const orientations = iframeWin.selectedOrientations || [];
 
-  // 3. 顯示「思考中」狀態
-  appendMessage('ai', '感應中...')
+  // 顯示感應中
+  const loadingMsg = document.createElement('div');
+  loadingMsg.className = 'message ai';
+  loadingMsg.innerText = '正在連結星辰能量...';
+  msgContainer.appendChild(loadingMsg);
 
   try {
-      if (cards.length >= 3) {
-        aiResponse = callTarotAI(text, cards, orientations);
-        appendMessage('ai', aiResponse);
-      } else {
-        aiResponse = callNormalAI(text);
-        appendMessage('ai', aiResponse);
-      }
-    } catch (error) {
-      aiResponse = "能量感應中斷...";
-      appendMessage('ai', '能量中斷');
+    if (cards.length >= 3) {
+      // 呼叫 Python API (裡面會連續 appendMessage)
+      await callTarotAI(text, cards, orientations);
+      msgContainer.removeChild(loadingMsg);
+    } else {
+      const aiResponse = await callNormalAI(text);
+      msgContainer.removeChild(loadingMsg);
+      appendMessage('ai', aiResponse);
     }
+  } catch (error) {
+    if(loadingMsg.parentNode) msgContainer.removeChild(loadingMsg);
+    appendMessage('ai', "能量中斷...");
+  }
+
+  userInput.value = '';
+  userInput.style.height = '40px';
 
 });
-// Enter 也可以送出訊息
+userInput.addEventListener('input', function() {
+  // 先把高度設為 auto，才能重新計算 scrollHeight
+  this.style.height = '32px';
+  if (this.scrollHeight > 36) {
+    this.style.height = (this.scrollHeight) + 'px';
+  }
+});
+// Enter 可以送出訊息 or 換行
 userInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') sendBtn.click();
+  // 如果按下 Enter 且沒有按住 Shift
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault(); // 防止在輸入框內換行
+    sendBtn.click();
+  }
 });
-
 
 document.getElementById('draw-card').addEventListener('click', ()=>{
   // 隱藏聊天室
@@ -372,7 +433,6 @@ backBtn.addEventListener('click', () => {
 
   // 3. 最後再切換 UI 狀態
   tableFrame.style.display = 'none';
-  // tableFrame.src = ''; 
   backBtn.style.display = 'none';
   chat.style.display = 'flex';
   });

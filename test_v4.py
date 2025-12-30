@@ -20,7 +20,7 @@ from typing import List, Dict, Any, Optional
 # ================= 基本設定 =================
 
 API_KEY_FILE = "APIKEY.txt"
-JSON_FOLDER = "Card_Json"
+JSON_FOLDER = "cards_json"
 OUTPUT_FOLDER = "outputs"
 
 MODEL_NAME = "gemma3:4b"
@@ -62,7 +62,8 @@ def load_tarot_database() -> List[Dict[str, Any]]:
     return db
 
 
-API_KEY = load_api_key()
+# API_KEY = load_api_key()
+API_KEY = "f84f4e9735f7b6cc351a61d41224a7a220947aebdfa37e62581fba3e4fc1fbfa"
 TAROT_DB = load_tarot_database()
 TAROT_ID_INDEX = {card["id"]: card for card in TAROT_DB if "id" in card}
 
