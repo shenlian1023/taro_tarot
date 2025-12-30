@@ -290,42 +290,6 @@ const sendBtn = document.getElementById('send-btn');
 async function callTarotAI(text, cards, orientations) {
   appendMessage('ai', '塔羅塔羅水晶球')
 
-  // try {
-  //   // 呼叫 Python 後端
-  //   let response = await fetch('http://localhost:5000/analyze_tarot', {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify({
-  //       question: text,
-  //       card_ids: cards,        
-  //       orientations: orientations 
-  //     })
-  //   });
-
-  //   // response = await fetch('outputs/tarot_api_output.json')
-  //   response = await fetch(`outputs/tarot_api_output.json?t=${Date.now()}`);
-  //   const data = await response.json();
-    
-  //   // 2. 依序顯示 dialogue (解牌內容)
-  //   for (const msg of data.dialogue) {
-  //       appendMessage('ai', msg);
-  //       // 停頓 1.5 秒讓使用者有時間閱讀
-  //       await new Promise(r => setTimeout(r, 1500)); 
-  //   }
-
-
-  //   // 3. 依序顯示 actions (行動建議)
-  //   for (const msg of data.actions) {
-  //       appendMessage('ai', msg);
-  //       await new Promise(r => setTimeout(r, 1200)); 
-  //   }
-
-  //   return "占卜結束。"; // 回傳給主邏輯的最後訊息
-  // } catch (error) {
-  //   console.error("API 連線失敗:", error);
-  //   return "能量感應失敗，請確認後端伺服器已啟動。";
-  // }
-
   try {
     const response = await fetch('http://localhost:5005/analyze_tarot', {
       method: 'POST',
@@ -337,16 +301,24 @@ async function callTarotAI(text, cards, orientations) {
       })
     });
 
+    appendMessage('ai', "工作完成");
+
     if (!response.ok) throw new Error("伺服器回應異常");
 
     const data = await response.json();
     
     // 注意：這裡對應後端的 jsonify({"messages": full_messages})
     // 依序顯示訊息
-    for (const msg of data.messages) {
+    // for (const msg of data.messages) {
+    //     appendMessage('ai', msg);
+    //     // 增加體感延遲，讓使用者像是在跟真人對話
+    //     await new Promise(r => setTimeout(r, 1200)); 
+    // }
+    if (data.messages && data.messages.length > 0) {
+      for (const msg of data.messages) {
         appendMessage('ai', msg);
-        // 增加體感延遲，讓使用者像是在跟真人對話
         await new Promise(r => setTimeout(r, 1200)); 
+      }
     }
 
     return "占卜結束。";
@@ -382,28 +354,24 @@ sendBtn.addEventListener('click', async () => {
   const orientations = iframeWin.selectedOrientations || [];
 
   // 顯示感應中
-  const loadingMsg = document.createElement('div');
-  loadingMsg.className = 'message ai';
-  loadingMsg.innerText = '正在連結星辰能量...';
-  msgContainer.appendChild(loadingMsg);
+  // const loadingMsg = document.createElement('div');
+  // loadingMsg.className = 'message ai';
+  // msgContainer.appendChild(loadingMsg);
 
   try {
     if (cards.length >= 3) {
       // 呼叫 Python API (裡面會連續 appendMessage)
       await callTarotAI(text, cards, orientations);
-      msgContainer.removeChild(loadingMsg);
     } else {
       const aiResponse = await callNormalAI(text);
-      msgContainer.removeChild(loadingMsg);
       appendMessage('ai', aiResponse);
     }
   } catch (error) {
-    if(loadingMsg.parentNode) msgContainer.removeChild(loadingMsg);
     appendMessage('ai', "能量中斷...");
   }
 
   userInput.value = '';
-  userInput.style.height = '40px';
+  userInput.style.height = '32px';
 
 });
 userInput.addEventListener('input', function() {

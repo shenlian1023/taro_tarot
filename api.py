@@ -288,20 +288,20 @@ def translate_frontend_input_to_v3_cards(
 
 # ================= Main =================
 
-if __name__ == "__main__":
-    question = "目前這段感情狀態，對我未來半年的影響是什麼？"
+# if __name__ == "__main__":
+#     question = "目前這段感情狀態，對我未來半年的影響是什麼？"
 
-    # 🔹 前端輸入
-    card_ids = [35, 33, 1]
-    orientations = [1, 0, 1]
+#     # 🔹 前端輸入
+#     card_ids = [35, 33, 1]
+#     orientations = [1, 0, 1]
 
-    # 🔹 轉譯成 v3 cards 結構
-    cards = translate_frontend_input_to_v3_cards(card_ids, orientations)
+#     # 🔹 轉譯成 v3 cards 結構
+#     cards = translate_frontend_input_to_v3_cards(card_ids, orientations)
 
-    result = generate_dialogue(question, cards)
+#     result = generate_dialogue(question, cards)
 
-    save_result_json(result)
-    # terminal_simulate(result)
+#     # save_result_json(result)
+#     # terminal_simulate(result)
 
 
 
