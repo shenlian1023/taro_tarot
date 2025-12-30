@@ -313,25 +313,24 @@ CORS(app) # 允許跨網域請求
 
 @app.route('/analyze_tarot', methods=['POST'])
 def analyze_tarot():
-    print("接收到前端請求！")
-    data = request.json
-    question = data.get('question')
-    card_ids = data.get('card_ids')
-    orientations = data.get('orientations')
+    try:
+        data = request.json
+        question = data.get('question')
+        card_ids = data.get('card_ids')
+        orientations = data.get('orientations')
 
-    # 1. 轉譯前端資料
-    cards = translate_frontend_input_to_v3_cards(card_ids, orientations)
-    
-    # 2. 執行 LLM 管線 (原本的 generate_dialogue)
-    result = generate_dialogue(question, cards)
-    
-    # 3. 儲存紀錄 (選用)
-    save_result_json(result)
-    
-    # 4. 回傳給前端 (合併對話與行動建議)
-    full_messages = result["dialogue"] + result["actions"]
-    return jsonify({"messages": full_messages})
+        # 這裡假設你的這些自定義函式運作正常
+        cards = translate_frontend_input_to_v3_cards(card_ids, orientations)
+        result = generate_dialogue(question, cards)
+        
+        # 確保 result["dialogue"] 和 result["actions"] 都是 list
+        full_messages = result.get("dialogue", []) + result.get("actions", [])
+        
+        return jsonify({"messages": full_messages})
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    print("🌟 塔羅後端伺服器啟動中：http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    print("🌟 塔羅後端伺服器啟動中：http://localhost:5005")
+    app.run(host='0.0.0.0', port=5005, debug=True)
