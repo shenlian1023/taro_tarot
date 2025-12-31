@@ -11,7 +11,7 @@ import urllib.error
 
 # ================= 設定區 =================
 API_KEY_FILE = "APIKEY.txt"
-JSON_FOLDER = "Card_Json"
+JSON_FOLDER = "outputs"
 MODEL_NAME = "gemma3:4b"
 API_URL = "https://api-gateway.netdb.csie.ncku.edu.tw/api/generate"
 
