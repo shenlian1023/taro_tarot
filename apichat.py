@@ -88,7 +88,7 @@ CHAT_MODE_PROMPT = """
 # =========================================================
 
 def save_conversation(conversation: list):
-    filename = f"{uuid.uuid4().hex}.json"
+    filename = f"ChatHistory.json"
     path = os.path.join(JSON_FOLDER, filename)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(conversation, f, ensure_ascii=False, indent=2)
