@@ -593,7 +593,6 @@ async function callNormalAI(text) {
 
 // 塔羅占卜的 AI 回應
 async function callTarotAI(text, cards, orientations) {
-  appendMessageWithDelay('ai', '塔羅塔羅水晶球', 0);
 
   try {
     const response = await fetch('http://localhost:5005/analyze_tarot', {
@@ -606,7 +605,6 @@ async function callTarotAI(text, cards, orientations) {
       })
     });
 
-    appendMessageWithDelay('ai', "工作完成", 0);
 
     if (!response.ok) throw new Error("伺服器回應異常");
 
