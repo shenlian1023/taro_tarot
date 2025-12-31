@@ -1,21 +1,19 @@
 import os
 import json
 import uuid
-import random
-import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Optional
 import urllib.request
 import urllib.error
+
 # ================= 設定區 =================
 API_KEY_FILE = "APIKEY.txt"
-JSON_FOLDER = "Card_Json"
+JSON_FOLDER = "Chat_History"
 MODEL_NAME = "gemma3:4b"
 API_URL = "https://api-gateway.netdb.csie.ncku.edu.tw/api/generate"
 
 MAX_TOKENS = 1024
 TEMPERATURE = 0.5
 # =========================================
-
 
 # =========================================================
 # 0) 基礎工具
@@ -31,17 +29,20 @@ def load_api_key() -> Optional[str]:
 API_KEY = load_api_key()
 if not API_KEY:
     raise RuntimeError("❌ 找不到 APIKEY.txt")
+
+os.makedirs(JSON_FOLDER, exist_ok=True)
+
 # =========================================================
 # LLM 呼叫
 # =========================================================
 
-def call_llm(prompt: str, temperature: float, num_predict: int) -> str:
+def call_llm(prompt: str) -> str:
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
         "stream": False,
-        "temperature": temperature,
-        "options": {"num_predict": num_predict}
+        "temperature": TEMPERATURE,
+        "options": {"num_predict": MAX_TOKENS}
     }
 
     req = urllib.request.Request(
@@ -58,115 +59,101 @@ def call_llm(prompt: str, temperature: float, num_predict: int) -> str:
         with urllib.request.urlopen(req, timeout=120) as resp:
             return json.loads(resp.read().decode()).get("response", "")
     except Exception as e:
-        return f"\n[ERROR] {e}"
+        return f"[ERROR] {e}"
 
 # =========================================================
-# prompt設定
+# Prompt 設定（嚴格聊天模式）
 # =========================================================
-
-PERSONAL_PROMPT = """
-語氣自然、清楚、有節奏，像真人對話。
-不要使用「嗯…」「感覺…」「好像…」作為開頭。
-""".strip()
 
 CHAT_MODE_PROMPT = """
-你是一位塔羅占卜師，但目前處於【聊天模式】。
+你是一位塔羅占卜師，但目前【只進行聊天模式】。
 
-【嚴格規則（必須遵守）】
-- 現在尚未抽牌
-- 禁止提及任何牌名、牌陣、張數、牌位
-- 禁止說「我會用某某牌陣」「抽三張牌」「這張牌代表」
-- 禁止假設已經抽牌
-- 只能進行一般聊天、傾聽、安撫與引導
-- 若使用者想占卜，只能詢問是否要抽牌，不能直接占卜
+【嚴格禁止事項】
+- 不得抽牌
+- 不得提及任何牌名、牌陣、牌義、張數、位置
+- 不得假設已經占卜
+- 不得直接給出占卜結果
+
+【你可以做的事】
+- 傾聽使用者的困擾
+- 幫助釐清問題
+- 引導使用者把問題說清楚
+- 安撫情緒、陪伴對話
+
+語氣自然、真誠、像真人對談。
 """.strip()
 
-TAROT_MODE_PROMPT = """
-你是一位成熟、可信任的塔羅占卜師。
-
-塔羅呈現的是狀態與趨勢，不是命定。
-禁止恐嚇、保證、貼標籤或教學。
-
-現在已經完成抽牌，可以根據指定的牌與問題進行解釋牌義。
-請只解釋牌義，不延伸未抽到的牌。
-""".strip()
-
-
-DRAW_QUESTION_TEXT = "\n要不要抽三張塔羅牌來看看呢？這樣我能更好的回答你的問題。"
-QUESTION_ASK_TEXT = "那我們這次要占卜的問題是什麼呢？請用一句話描述。"
-
 # =========================================================
-# 狀態定義
-# =========================================================
-STATE_CHAT = "chat"
-STATE_CONFIRM_QUESTION = "confirm_question"
-STATE_DRAWING = "drawing"
-
-state = STATE_CHAT
-current_question = None
-conversation = ""
-
-# =========================================================
-# 主程式
+# JSON 儲存
 # =========================================================
 
-if __name__ == "__main__": 
-    print("對話開始")
+def save_conversation(conversation: list):
+    filename = f"{uuid.uuid4().hex}.json"
+    path = os.path.join(JSON_FOLDER, filename)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(conversation, f, ensure_ascii=False, indent=2)
+    return path
+
+# =========================================================
+# 主程式（只聊天，存檔只在「提問」）
+# =========================================================
+
+if __name__ == "__main__":
+    print("你好，有什麼煩惱呢？")
+
+    conversation = []   # list of {role, content}
+    awaiting_question = False  # 是否正在等「塔羅問題」
 
     while True:
         user_input = input("\n使用者： ").strip()
+
         if user_input.lower() in ["exit", "quit"]:
             break
-        # ================= 狀態 1：一般聊天 ================= 
-        if state == STATE_CHAT: 
-            if user_input in ["是", "好", "要", "我要抽牌"]:
-                print("\n🔮 占卜師：")
-                print(QUESTION_ASK_TEXT)
-                state = STATE_CONFIRM_QUESTION
-                continue
-            # 不抽牌進一般聊天
-            conversation += f"\n使用者：{user_input}\n"
-            chat_prompt = (
-                CHAT_MODE_PROMPT + "\n\n"
-                + PERSONAL_PROMPT + "\n\n"
-                + conversation
-            )
-            reply = call_llm(chat_prompt, TEMPERATURE, MAX_TOKENS).strip()
-            reply += DRAW_QUESTION_TEXT
-            print("\n🤖 占卜師：")
-            print(reply)
-            conversation += reply + "\n"
-        # ================= 狀態 2：確認占卜問題 =================
-        elif state == STATE_CONFIRM_QUESTION:
-            current_question = user_input.strip()
-            print("\n🤖 占卜師：")
-            print("好，請點選右方抽牌鍵開始抽牌!")
-            state = STATE_DRAWING 
-        # ================= 狀態 3：抽牌並解牌 =================
-        elif state == STATE_DRAWING:
-            # 目前先假抽牌，之後可接 JSON
-            drawn_card = "戀人（正位）"
 
-            tarot_prompt = f"""
-{TAROT_MODE_PROMPT}
-
-【占卜問題】
-{current_question}
-
-【抽到的牌】
-{drawn_card}
-
-請針對上面的問題進行解釋牌義。
-""".strip()
-
-            reply = call_llm(tarot_prompt, TEMPERATURE, MAX_TOKENS).strip()
-
+        # === 使用者按下「開始提問」按鈕 ===
+        if user_input == "__START_QUESTION__":
+            system_msg = "請輸入您要問塔羅的問題"
             print("\n🔮 占卜師：")
-            print(reply)
+            print(system_msg)
 
-            conversation += f"\n【占卜問題】：{current_question}\n"
-            conversation += f"【抽到的牌】：{drawn_card}\n"
-            conversation += reply + "\n"
+            conversation.append({
+                "role": "system",
+                "content": system_msg
+            })
 
-            current_question = None
-            state = STATE_CHAT
+            awaiting_question = True
+            continue
+
+        # === 正在等待使用者輸入「占卜問題」===
+        if awaiting_question:
+            conversation.append({
+                "role": "user",
+                "content": user_input
+            })
+
+            saved_path = save_conversation(conversation)
+            print(f"\n📁 對話已儲存：{saved_path}")
+
+            # 重置狀態（或你也可以選擇 break）
+            awaiting_question = False
+            continue
+
+        # === 一般聊天（不存檔）===
+        conversation.append({
+            "role": "user",
+            "content": user_input
+        })
+
+        prompt = CHAT_MODE_PROMPT + "\n\n"
+        for msg in conversation:
+            prompt += f"{msg['role']}：{msg['content']}\n"
+
+        reply = call_llm(prompt).strip()
+
+        print("\n🔮 占卜師：")
+        print(reply)
+
+        conversation.append({
+            "role": "assistant",
+            "content": reply
+        })
