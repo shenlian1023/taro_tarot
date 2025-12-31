@@ -41,3 +41,33 @@
 ├── cards_json/              # 78張塔羅牌的牌義解說 JSON
 ├── cards_pic/               # 78張塔羅牌的圖片檔  
 └── README.md
+
+## 環境需求
+
+- Python 3.9 以上  
+- 作業系統：Windows / macOS / Linux  
+- 可使用的 LLM API（本專案預設使用 `gemma3:4b`）
+
+### 必要 Python 套件
+
+```bash
+pip install flask flask-cors
+
+## 啟動方式
+1. 啟動聊天模式後端（Port 8001）
+```bash
+python tarot_chat_api.py
+2. 啟動正式占卜後端（Port 5005）
+```bash
+python tarot_api.py
+3. 開啟前端介面
+- 使用瀏覽器直接開啟：Chat_room_ui.html（建議使用 Chrome 或 Edge）
+
+## 使用流程說明
+1. 開啟畫面後，可先與占卜師自由聊天
+2. 點擊右側 「開始提問」
+3. 輸入想占卜的問題（一句話即可）
+4. 系統進入抽牌畫面
+5. 憑直覺選擇三張塔羅牌
+6. 點擊 「開始分析」
+7. 回到聊天室，依序顯示占卜解讀與行動提醒
