@@ -330,7 +330,28 @@ async function callTarotAI(text, cards, orientations) {
 }
 // Ollama
 async function callNormalAI(text) {
-  return '現在是羊駝在說話';
+  appendMessage('ai', '現在是羊駝在說話')
+  try {
+    const response = await fetch('http://localhost:8001/normal_chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    });
+
+    if (!response.ok) throw new Error("一般聊天伺服器連線異常");
+
+    const data = await response.json();
+    
+    // 如果後端回傳狀態是 drawing，你可以選擇在這邊做一些 UI 提示（選配）
+    if (data.state === "drawing") {
+      console.log("狀態切換：準備抽牌");
+    }
+
+    return data.reply; // 回傳後端的 reply 字串
+  } catch (error) {
+    console.error("API 連線失敗:", error);
+    return "占卜師正在沉思中，請確認後端服務 (8001) 是否啟動。";
+  }
 }
 function appendMessage(role, text) {
   const msgDiv = document.createElement('div');
