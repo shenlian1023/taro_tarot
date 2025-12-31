@@ -288,7 +288,7 @@ const sendBtn = document.getElementById('send-btn');
 
 // Astrologer
 async function callTarotAI(text, cards, orientations) {
-  appendMessage('ai', '塔羅塔羅水晶球')
+  // appendMessage('ai', '塔羅塔羅水晶球')
 
   try {
     const response = await fetch('http://localhost:5005/analyze_tarot', {
@@ -330,7 +330,7 @@ async function callTarotAI(text, cards, orientations) {
 }
 // Ollama
 async function callNormalAI(text) {
-  appendMessage('ai', '現在是羊駝在說話')
+  // appendMessage('ai', '現在是羊駝在說話')
   try {
     const response = await fetch('http://localhost:8001/normal_chat', {
       method: 'POST',

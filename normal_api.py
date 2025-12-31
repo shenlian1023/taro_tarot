@@ -17,6 +17,12 @@ API_URL = "https://api-gateway.netdb.csie.ncku.edu.tw/api/generate"
 
 MAX_TOKENS = 1024
 TEMPERATURE = 0.5
+
+DRAW_QUESTION_TEXT = "\n要不要抽三張塔羅牌來看看呢？這樣我能更好的回答你的問題。"
+QUESTION_ASK_TEXT = "那我們這次要占卜的問題是什麼呢？請用一句話描述。"
+
+if not os.path.exists(JSON_FOLDER):
+    os.makedirs(JSON_FOLDER)
 # =========================================
 
 
@@ -38,13 +44,11 @@ if not API_KEY:
 # LLM 呼叫
 # =========================================================
 
-def call_llm(prompt: str, temperature: float, num_predict: int) -> str:
+def call_llm(prompt: str) -> str:
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
-        "stream": False,
-        "temperature": temperature,
-        "options": {"num_predict": num_predict}
+        "stream": False
     }
 
     req = urllib.request.Request(
@@ -64,114 +68,102 @@ def call_llm(prompt: str, temperature: float, num_predict: int) -> str:
         return f"\n[ERROR] {e}"
 
 # =========================================================
-# prompt設定
+# Prompt 設定（嚴格聊天模式）
 # =========================================================
-
-PERSONAL_PROMPT = """
-語氣自然、清楚、有節奏，像真人對話。
-不要使用「嗯…」「感覺…」「好像…」作為開頭。
-""".strip()
 
 CHAT_MODE_PROMPT = """
-你是一位塔羅占卜師，但目前處於【聊天模式】。
+你是一位塔羅占卜師，但目前【只進行聊天模式】。
 
-【嚴格規則（必須遵守）】
-- 現在尚未抽牌
-- 禁止提及任何牌名、牌陣、張數、牌位
-- 禁止說「我會用某某牌陣」「抽三張牌」「這張牌代表」
-- 禁止假設已經抽牌
-- 只能進行一般聊天、傾聽、安撫與引導
-- 若使用者想占卜，只能詢問是否要抽牌，不能直接占卜
+【嚴格禁止事項】
+- 不得抽牌
+- 不得提及任何牌名、牌陣、牌義、張數、位置
+- 不得假設已經占卜
+- 不得直接給出占卜結果
+
+【你可以做的事】
+- 傾聽使用者的困擾
+- 幫助釐清問題
+- 引導使用者把問題說清楚
+- 安撫情緒、陪伴對話
+
+語氣自然、真誠、像真人對談。
 """.strip()
 
-TAROT_MODE_PROMPT = """
-你是一位成熟、可信任的塔羅占卜師。
-
-塔羅呈現的是狀態與趨勢，不是命定。
-禁止恐嚇、保證、貼標籤或教學。
-
-現在已經完成抽牌，可以根據指定的牌與問題進行解釋牌義。
-請只解釋牌義，不延伸未抽到的牌。
-""".strip()
-
-
-DRAW_QUESTION_TEXT = "\n要不要抽三張塔羅牌來看看呢？這樣我能更好的回答你的問題。"
-QUESTION_ASK_TEXT = "那我們這次要占卜的問題是什麼呢？請用一句話描述。"
-
 # =========================================================
-# 狀態定義
-# =========================================================
-STATE_CHAT = "chat"
-STATE_CONFIRM_QUESTION = "confirm_question"
-STATE_DRAWING = "drawing"
-
-state = STATE_CHAT
-current_question = None
-conversation = ""
-
-# =========================================================
-# 主程式
+# JSON 儲存
 # =========================================================
 
-# if __name__ == "__main__": 
-#     print("對話開始")
-
-    # user_input = input("\n使用者： ").strip()
-    # # ================= 狀態 1：一般聊天 ================= 
-    # if state == STATE_CHAT: 
-    #     if user_input in ["是", "好", "要", "我要抽牌"]:
-    #         print("\n🔮 占卜師：")
-    #         print(QUESTION_ASK_TEXT)
-    #         state = STATE_CONFIRM_QUESTION
-    #     # 不抽牌進一般聊天
-    #     conversation += f"\n使用者：{user_input}\n"
-    #     chat_prompt = (
-    #         CHAT_MODE_PROMPT + "\n\n"
-    #         + PERSONAL_PROMPT + "\n\n"
-    #         + conversation
-    #     )
-    #     reply = call_llm(chat_prompt, TEMPERATURE, MAX_TOKENS).strip()
-    #     reply += DRAW_QUESTION_TEXT
-    #     print("\n🤖 占卜師：")
-    #     print(reply)
-    #     conversation += reply + "\n"
-    # # ================= 狀態 2：確認占卜問題 =================
-    # elif state == STATE_CONFIRM_QUESTION:
-    #     current_question = user_input.strip()
-    #     print("\n🤖 占卜師：")
-    #     print("好，請點選右方抽牌鍵開始抽牌!")
-    #     state = STATE_DRAWING 
-    # # ================= 狀態 3：抽牌並解牌 =================
-    # elif state == STATE_DRAWING:
-    #     # 目前先假抽牌，之後可接 JSON
-    #     drawn_card = "戀人（正位）"
-
-    #     tarot_prompt = f"""
+def save_conversation(conversation: list):
+    filename = f"{uuid.uuid4().hex}.json"
+    path = os.path.join(JSON_FOLDER, filename)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(conversation, f, ensure_ascii=False, indent=2)
+    return path
 
 
-# {TAROT_MODE_PROMPT}
 
-## 【占卜問題】
-# {current_question}
+# =========================================================
+# 主程式（只聊天，存檔只在「提問」）
+# =========================================================
+# if __name__ == "__main__":
+#     print("你好，有什麼煩惱呢？")
 
-# 【抽到的牌】
-# {drawn_card}
+#     conversation = []   # list of {role, content}
+#     awaiting_question = False  # 是否正在等「塔羅問題」
 
-# 請針對上面的問題進行解釋牌義。
-# """.strip()
+#     while True:
+#         user_input = input("\n使用者： ").strip()
 
-# reply = call_llm(chat_prompt, TEMPERATURE, MAX_TOKENS).strip()
+#         if user_input.lower() in ["exit", "quit"]:
+#             break
 
-# print("\n🔮 占卜師：")
-# print(reply)
+#         # === 使用者按下「開始提問」按鈕 ===
+#         if user_input == "__START_QUESTION__":
+#             system_msg = "請輸入您要問塔羅的問題"
+#             print("\n🔮 占卜師：")
+#             print(system_msg)
 
-# conversation += f"\n【占卜問題】：{current_question}\n"
-# conversation += f"【抽到的牌】：{drawn_card}\n"
-# conversation += reply + "\n"
+#             conversation.append({
+#                 "role": "system",
+#                 "content": system_msg
+#             })
 
-# current_question = None
-# state = STATE_CHAT
+#             awaiting_question = True
+#             continue
 
+#         # === 正在等待使用者輸入「占卜問題」===
+#         if awaiting_question:
+#             conversation.append({
+#                 "role": "user",
+#                 "content": user_input
+#             })
+
+#             saved_path = save_conversation(conversation)
+#             print(f"\n📁 對話已儲存：{saved_path}")
+
+#             # 重置狀態（或你也可以選擇 break）
+#             awaiting_question = False
+#             continue
+
+#         # === 一般聊天（不存檔）===
+#         conversation.append({
+#             "role": "user",
+#             "content": user_input
+#         })
+
+#         prompt = CHAT_MODE_PROMPT + "\n\n"
+#         for msg in conversation:
+#             prompt += f"{msg['role']}：{msg['content']}\n"
+
+#         reply = call_llm(prompt).strip()
+
+#         print("\n🔮 占卜師：")
+#         print(reply)
+
+#         conversation.append({
+#             "role": "assistant",
+#             "content": reply
+#         })
 
 # ================= Flask 啟動 =================
 app = Flask(__name__)
@@ -180,57 +172,69 @@ CORS(app)
 # 初始化狀態 (全域管理)
 status = {
     "state": "chat",
-    "conversation": "",
+    "conversation": [],  # 使用 list 儲存 {role, content}
     "current_question": None
 }
 
 @app.route('/normal_chat', methods=['POST'])
 def normal_chat():
-    global status
-    data = request.json
-    user_input = data.get('message', '').strip()
-    
-    if not user_input:
-        return jsonify({"reply": "你想說什麼呢？", "state": status["state"]})
+    # 1. 獲取前端傳來的資料
+    data = request.get_json()
+    user_input = data.get("user_input", "").strip()
+    conversation = status["conversation"]
+    awaiting_question = (status["state"] == "awaiting_question")
 
-    # --- 狀態邏輯切換 ---
-    if status["state"] == "chat":
-        # 檢查是否觸發抽牌
-        if user_input in ["是", "好", "要", "我要抽牌", "想占卜"]:
-            status["state"] = "confirm_question"
-            reply = "那我們這次要占卜的問題是什麼呢？請用一句話描述。"
-        else:
-            # 一般聊天
-            status["conversation"] += f"使用者：{user_input}\n"
-            full_prompt = f"{CHAT_MODE_PROMPT}\n\n{PERSONAL_PROMPT}\n\n{status['conversation']}占卜師："
-            reply = call_llm(full_prompt, TEMPERATURE, MAX_TOKENS).strip()
-            
-            # 附加引導語
-            if "抽牌" not in reply:
-                reply += DRAW_QUESTION_TEXT
-                
-            status["conversation"] += f"占卜師：{reply}\n"
+    # 用於回傳前端的結果
+    result = {
+        "reply": "",
+        "conversation": conversation,
+        "awaiting_question": awaiting_question,
+        "saved_path": None
+    }
 
-    elif status["state"] == "confirm_question":
-        status["current_question"] = user_input
-        reply = f"收到了，關於「{user_input}」的問題。現在請點擊右方「抽牌」按鈕開始抽牌！"
-        status["state"] = "drawing"
+    # === 使用者按下「開始提問」按鈕 ===
+    if user_input == "__START_QUESTION__":
+        system_msg = "請輸入您要問塔羅的問題"
+        # conversation.append({"role": "system", "content": system_msg})
+        status["conversation"].append({
+        "role": "system",
+        "content": "使用者進入占卜提問階段"
+        })
 
-    elif status["state"] == "drawing":
-        reply = "你已經準備好抽牌了！請點擊右側的金光按鈕進行抽牌。"
+        status["state"] = "awaiting_question"
 
-    return jsonify({
-        "reply": reply, 
-        "state": status["state"]
-    })
+        result["reply"] = system_msg
+        result["awaiting_question"] = True
+        return jsonify(result)
 
-@app.route('/reset', methods=['POST'])
-def reset():
-    global status
-    status = {"state": "chat", "conversation": "", "current_question": None}
-    return jsonify({"status": "reset success"})
+    # === 正在等待使用者輸入「占卜問題」===
+    if awaiting_question:
+        conversation.append({"role": "user", "content": user_input})
+        
+        # 呼叫你原本的存檔函式
+        saved_path = save_conversation(conversation)
+        
+        result["reply"] = f"問題已收到（已儲存至：{saved_path}），正在為您準備占卜..."
+        result["awaiting_question"] = False
+        result["saved_path"] = saved_path
+        return jsonify(result)
 
+    # === 一般聊天（不存檔）===
+    conversation.append({"role": "user", "content": user_input})
+
+    # 組合 Prompt 呼叫 LLM (call_llm 需是你定義好的函式)
+    prompt = CHAT_MODE_PROMPT + "\n\n"
+    for msg in conversation:
+        prompt += f"{msg['role']}：{msg['content']}\n"
+
+    reply = call_llm(prompt).strip()
+
+    conversation.append({"role": "assistant", "content": reply})
+
+    result["reply"] = reply
+    return jsonify(result)
+
+# 這裡才是啟動點，確保外面沒有任何會卡住（如 while True）的代碼
 if __name__ == "__main__":
-    # 移除了所有 input() 邏輯，直接啟動 Flask
-    print("🌟 聊天引導後端啟動：http://localhost:8001")
+    print("🌟 聊天引導後端（Port 8001）正在啟動...")
     app.run(host='0.0.0.0', port=8001, debug=True)
