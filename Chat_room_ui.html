@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>聊天室 + 抽牌示範</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* 星空背景 */
+    #starfield {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+      z-index: 0;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    .shooting-star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
+      animation: shoot 3s linear infinite;
+    }
+
+    @keyframes shoot {
+      0% {
+        transform: translateX(0) translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(-300px) translateY(300px);
+        opacity: 0;
+      }
+    }
+
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.15;
+      animation: float 20s infinite ease-in-out;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(100px, -100px) scale(1.1); }
+      66% { transform: translate(-100px, 100px) scale(0.9); }
+    }
+
+    #chat-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px;
+      height: 800px;
+      border-radius: 20px;
+      border: 2px solid rgba(147, 112, 219, 0.4);
+      box-shadow: 
+        0 0 60px rgba(138, 43, 226, 0.3),
+        0 0 100px rgba(75, 0, 130, 0.2),
+        inset 0 0 60px rgba(75, 0, 130, 0.1);
+      background: rgba(10, 10, 30, 0.7);
+      backdrop-filter: blur(20px);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      z-index: 10;
+      animation: containerGlow 4s ease-in-out infinite;
+    }
+
+    @keyframes containerGlow {
+      0%, 100% { box-shadow: 0 0 60px rgba(138, 43, 226, 0.3), 0 0 100px rgba(75, 0, 130, 0.2), inset 0 0 60px rgba(75, 0, 130, 0.1); }
+      50% { box-shadow: 0 0 80px rgba(138, 43, 226, 0.5), 0 0 120px rgba(75, 0, 130, 0.3), inset 0 0 80px rgba(75, 0, 130, 0.15); }
+    }
+
+    #messages {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      justify-content: flex-start;
+      align-items: flex-start;
+    }
+
+    #messages::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #messages::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+
+    #messages::-webkit-scrollbar-thumb {
+      background: rgba(147, 112, 219, 0.5);
+      border-radius: 10px;
+      transition: background 0.3s;
+    }
+
+    #messages::-webkit-scrollbar-thumb:hover {
+      background: rgba(147, 112, 219, 0.8);
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 15px 20px;
+      border-radius: 18px;
+      line-height: 1.6;
+      word-wrap: break-word;
+      position: relative;
+      animation: messageSlide 0.4s ease-out;
+    }
+
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.ai {
+      align-self: flex-start;
+      background: linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(75, 0, 130, 0.3));
+      color: #e6d5ff;
+      border: 1px solid rgba(147, 112, 219, 0.4);
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.2);
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.9), rgba(255, 185, 0, 0.95));
+      color: #1a1a2e;
+      border-bottom-right-radius: 4px;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+    }
+
+    #input-area {
+      padding: 25px 30px;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+      display: flex;
+      gap: 15px;
+      border-top: 1px solid rgba(147, 112, 219, 0.3);
+      align-items: center;
+    }
+
+    #user-input {
+      flex: 1;
+      height: 32px;
+      min-height: 32px;
+      max-height: 100px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1.5px solid rgba(147, 112, 219, 0.4);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: #e6d5ff;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+      outline: none;
+      transition: all 0.3s ease;
+      resize: none;
+      overflow-y: auto;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+
+    #user-input::placeholder {
+      color: rgba(230, 213, 255, 0.5);
+    }
+
+    #user-input:focus {
+      border-color: rgba(138, 43, 226, 0.8);
+      background: rgba(138, 43, 226, 0.15);
+      box-shadow: 0 0 20px rgba(138, 43, 226, 0.3);
+    }
+
+    #send-btn {
+      height: 56px;
+      padding: 0 30px;
+      background: linear-gradient(135deg, #9370DB, #8A2BE2);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+    }
+
+    #send-btn:hover {
+      background: linear-gradient(135deg, #A682E8, #9B4FE8);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
+    }
+
+    #send-btn:active {
+      transform: translateY(0);
+    }
+
+    #start-question-btn {
+      position: fixed;
+      top: 50%;
+      right: 120px;
+      transform: translateY(-50%);
+      padding: 25px 45px;
+      font-size: 22px;
+      font-weight: bold;
+      letter-spacing: 4px;
+      color: #1a1a2e;
+      background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
+      background-size: 200% auto;
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      border-radius: 15px;
+      box-shadow: 
+        0 8px 25px rgba(255, 215, 0, 0.4),
+        0 0 40px rgba(255, 165, 0, 0.3),
+        inset 0 0 20px rgba(255, 215, 0, 0.2);
+      cursor: pointer;
+      z-index: 11;
+      transition: all 0.4s ease;
+      outline: none;
+      text-transform: uppercase;
+      animation: startBtnPulse 3s infinite;
+    }
+
+    @keyframes startBtnPulse {
+      0%, 100% { 
+        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4), 0 0 40px rgba(255, 165, 0, 0.3);
+        transform: translateY(-50%);
+      }
+      50% { 
+        box-shadow: 0 8px 35px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 165, 0, 0.5);
+        transform: translateY(-50%) scale(1.02);
+      }
+    }
+
+    #start-question-btn:hover {
+      transform: translateY(-52%) scale(1.08);
+      background-position: right center;
+      box-shadow: 
+        0 12px 35px rgba(255, 215, 0, 0.6),
+        0 0 60px rgba(255, 165, 0, 0.7);
+      color: #000;
+    }
+
+    #start-question-btn:active {
+      transform: translateY(-50%) scale(1.02);
+    }
+
+    #card-container {
+      position: fixed;
+      top: 0;
+      left: 40px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 25px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .card-display {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      pointer-events: auto;
+      animation: cardFadeIn 0.6s ease-out;
+    }
+
+    @keyframes cardFadeIn {
+      from {
+        opacity: 0;
+        transform: translateX(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .card-display img {
+      width: 140px;
+      height: auto;
+      max-height: 26vh;
+      object-fit: contain;
+      border: 3px solid rgba(147, 112, 219, 0.6);
+      border-radius: 12px;
+      box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(138, 43, 226, 0.5),
+        inset 0 0 20px rgba(138, 43, 226, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .card-display:hover img {
+      transform: scale(1.05);
+      box-shadow: 
+        0 12px 35px rgba(0, 0, 0, 0.8),
+        0 0 40px rgba(138, 43, 226, 0.7);
+    }
+
+    .card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e6d5ff;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+    }
+
+    .card-orientation {
+      font-size: 14px;
+      padding: 4px 12px;
+      border-radius: 6px;
+      width: fit-content;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+
+    .card-orientation.upright {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 165, 0, 0.3));
+      border: 1px solid rgba(255, 215, 0, 0.6);
+      color: #ffd700;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+    }
+
+    .card-orientation.reversed {
+      background: linear-gradient(135deg, rgba(138, 43, 226, 0.3), rgba(75, 0, 130, 0.3));
+      border: 1px solid rgba(138, 43, 226, 0.6);
+      color: #c8a2e8;
+      text-shadow: 0 0 8px rgba(138, 43, 226, 0.4);
+    }
+
+    #tableFrame {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      z-index: 100;
+    }
+
+    #back-button {
+      display: none;
+      position: fixed;
+      top: 30px;
+      left: 30px;
+      padding: 12px 24px;
+      background: rgba(138, 43, 226, 0.8);
+      backdrop-filter: blur(10px);
+      color: white;
+      border: 2px solid rgba(147, 112, 219, 0.6);
+      border-radius: 10px;
+      cursor: pointer;
+      z-index: 101;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+    }
+
+    #back-button:hover {
+      background: rgba(138, 43, 226, 1);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
+    }
+
+    /* 轉場動畫遮罩 */
+    #transition-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(138, 43, 226, 0.9), rgba(10, 10, 30, 0.95));
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+
+    #transition-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .transition-content {
+      text-align: center;
+      color: #e6d5ff;
+    }
+
+    .transition-symbol {
+      font-size: 80px;
+      animation: rotate 2s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .transition-text {
+      font-size: 24px;
+      margin-top: 20px;
+      letter-spacing: 3px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+
+<body>
+<!-- 星空背景 -->
+<div id="starfield"></div>
+
+<!-- 轉場動畫 -->
+<div id="transition-overlay">
+  <div class="transition-content">
+    <div class="transition-symbol">✧</div>
+    <div class="transition-text">命運之輪轉動中...</div>
+  </div>
+</div>
+
+<!-- 畫面左邊放牌 -->
+<div id="card-container"></div>
+
+<!-- 聊天室 -->
+<div id="chat-container">
+  <div id="messages">
+    <div class="message ai">歡迎來到神秘塔羅占卜室。✨</div>
+    <div class="message ai">我是你的占卜師，在星辰的指引下為你解讀命運的訊息。</div>
+    <div class="message ai">在這裡，你可以隨意與我聊天，分享你的困惑或煩惱。</div>
+    <div class="message ai">當你準備好接受塔羅的指引時，請點擊右側的「開始提問」按鈕，我將為你進行正式的占卜。🔮</div>
+  </div>
+
+  <div id="input-area">
+    <textarea id="user-input" placeholder="你想告訴我什麼呢?" autocomplete="off" rows="1"></textarea>
+    <button id="send-btn">發送</button>
+  </div>
+</div>
+
+<!-- 開始提問按鈕 -->
+<button id="start-question-btn">開始提問</button>
+
+<!-- 全螢幕 Table.html -->
+<iframe id="tableFrame" src=""></iframe>
+<button id="back-button">返回聊天</button>
+
+<script>
+// 創建星空
+function createStarfield() {
+  const starfield = document.getElementById('starfield');
+  
+  for (let i = 0; i < 3; i++) {
+    const orb = document.createElement('div');
+    orb.className = 'glow-orb';
+    orb.style.width = Math.random() * 300 + 200 + 'px';
+    orb.style.height = orb.style.width;
+    orb.style.left = Math.random() * 100 + '%';
+    orb.style.top = Math.random() * 100 + '%';
+    orb.style.animationDelay = Math.random() * 5 + 's';
+    
+    const colors = ['rgba(138, 43, 226, 0.3)', 'rgba(75, 0, 130, 0.3)', 'rgba(147, 112, 219, 0.3)'];
+    orb.style.background = colors[i % colors.length];
+    
+    starfield.appendChild(orb);
+  }
+  
+  for (let i = 0; i < 200; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.animationDelay = Math.random() * 3 + 's';
+    star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+    starfield.appendChild(star);
+  }
+  
+  for (let i = 0; i < 3; i++) {
+    const shootingStar = document.createElement('div');
+    shootingStar.className = 'shooting-star';
+    shootingStar.style.left = Math.random() * 100 + '%';
+    shootingStar.style.top = Math.random() * 50 + '%';
+    shootingStar.style.animationDelay = Math.random() * 5 + 's';
+    shootingStar.style.animationDuration = (Math.random() * 2 + 2) + 's';
+    starfield.appendChild(shootingStar);
+  }
+}
+
+createStarfield();
+
+const chat = document.getElementById('chat-container');
+const tableFrame = document.getElementById('tableFrame');
+const backBtn = document.getElementById('back-button');
+const cardContainer = document.getElementById('card-container');
+const msgContainer = document.getElementById('messages');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const startQuestionBtn = document.getElementById('start-question-btn');
+const transitionOverlay = document.getElementById('transition-overlay');
+
+let questionMode = false; // 是否進入提問模式
+let userQuestion = '';
+
+// 延遲顯示訊息的函數
+async function appendMessageWithDelay(role, text, delay = 0) {
+  if (delay > 0) {
+    await new Promise(r => setTimeout(r, delay));
+  }
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `message ${role}`;
+  msgDiv.innerText = text;
+  msgContainer.appendChild(msgDiv);
+  msgContainer.scrollTop = msgContainer.scrollHeight;
+}
+
+// 一般閒聊的 AI 回應
+async function callNormalAI(text) {
+  return '現在是羊駝在說話';
+}
+
+// 塔羅占卜的 AI 回應
+async function callTarotAI(text, cards, orientations) {
+  appendMessageWithDelay('ai', '塔羅塔羅水晶球', 0);
+
+  try {
+    const response = await fetch('http://localhost:5005/analyze_tarot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: text,
+        card_ids: cards,
+        orientations: orientations
+      })
+    });
+
+    appendMessageWithDelay('ai', "工作完成", 0);
+
+    if (!response.ok) throw new Error("伺服器回應異常");
+
+    const data = await response.json();
+    
+    if (data.messages && data.messages.length > 0) {
+      for (const msg of data.messages) {
+        await appendMessageWithDelay('ai', msg, 1200);
+      }
+    }
+
+    return "占卜結束。";
+  } catch (error) {
+    console.error("API 連線失敗:", error);
+    appendMessageWithDelay('ai', "能量感應失敗,請確認後端伺服器已啟動。", 0);
+  }
+}
+
+// 開始提問按鈕
+startQuestionBtn.addEventListener('click', async () => {
+  if (questionMode) return;
+  
+  questionMode = true;
+  startQuestionBtn.style.display = 'none';
+  
+  // 顯示介紹訊息
+  await appendMessageWithDelay('ai', '很好,讓我們進入正式的塔羅占卜。', 500);
+  await appendMessageWithDelay('ai', '📝 首先,請在下方輸入你想詢問的問題', 1000);
+  await appendMessageWithDelay('ai', '🎴 接著,你將從78張塔羅牌中憑直覺選擇三張牌', 1000);
+  await appendMessageWithDelay('ai', '✨ 最後,我會根據你選擇的牌為你解讀命運的啟示', 1000);
+  await appendMessageWithDelay('ai', '現在,請告訴我你的問題吧～', 1000);
+  
+  userInput.placeholder = '請輸入你想詢問的問題...';
+  userInput.focus();
+});
+
+// 發送訊息
+sendBtn.addEventListener('click', async () => {
+  const text = userInput.value.trim();
+  if (!text) return;
+
+  appendMessageWithDelay('user', text, 0);
+  userInput.value = '';
+  userInput.style.height = '32px';
+
+  // 如果是提問模式
+  if (questionMode) {
+    userQuestion = text;
+    userInput.disabled = true;
+    sendBtn.disabled = true;
+
+    await appendMessageWithDelay('ai', '收到你的問題了。現在,讓我們開始選牌吧...', 800);
+    
+    // 顯示轉場動畫
+    setTimeout(() => {
+      transitionOverlay.classList.add('active');
+      
+      // 1.5秒後跳轉到抽牌頁面
+      setTimeout(() => {
+        chat.style.display = 'none';
+        tableFrame.src = 'Draw_cards_ui.html';
+        tableFrame.style.display = 'block';
+        backBtn.style.display = 'block';
+        cardContainer.innerHTML = '';
+        
+        // 淡出轉場
+        setTimeout(() => {
+          transitionOverlay.classList.remove('active');
+        }, 500);
+      }, 1500);
+    }, 1500);
+  } 
+  // 如果是閒聊模式
+  else {
+    try {
+      const aiResponse = await callNormalAI(text);
+      await appendMessageWithDelay('ai', aiResponse, 800);
+    } catch (error) {
+      await appendMessageWithDelay('ai', "抱歉,我好像走神了...", 800);
+    }
+  }
+});
+
+userInput.addEventListener('input', function() {
+  this.style.height = '32px';
+  if (this.scrollHeight > 36) {
+    this.style.height = (this.scrollHeight) + 'px';
+  }
+});
+
+userInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendBtn.click();
+  }
+});
+
+// 塔羅牌資料
+const tarotData = [];
+const tarotFileMap = {
+  0:  "01_the_fool.json",
+  1:  "02_the_magician.json",
+  2:  "03_high_priestess.json",
+  3:  "04_the_empress.json",
+  4:  "05_the_emperor.json",
+  5:  "06_the_hierophant.json",
+  6:  "07_the_lovers.json",
+  7:  "08_the_chariot.json",
+  8:  "09_strength.json",
+  9:  "10_hermit.json",
+  10: "11_wheel_of_fortune.json",
+  11: "12_justice.json",
+  12: "13_hanged_man.json",
+  13: "14_death.json",
+  14: "15_temperance.json",
+  15: "16_the_devil.json",
+  16: "17_the_tower.json",
+  17: "18_the_star.json",
+  18: "19_the_moon.json",
+  19: "20_the_sun.json",
+  20: "21_judgement.json",
+  21: "22_the_world.json",
+
+  // Wands
+  22: "23_ace_of_wands.json",
+  23: "24_two_of_wands.json",
+  24: "25_three_of_wands.json",
+  25: "26_four_of_wands.json",
+  26: "27_five_of_wands.json",
+  27: "28_six_of_wands.json",
+  28: "29_seven_of_wands.json",
+  29: "30_eight_of_wands.json",
+  30: "31_night_of_wands.json",
+  31: "32_ten_of_wands.json",
+  32: "33_page_of_wands.json",
+  33: "34_knight_of_wands.json",
+  34: "35_queen_of_wands.json",
+  35: "36_king_of_wands.json",
+
+  // Cups
+  36: "37_ace_of_cups.json",
+  37: "38_two_of_cups.json",
+  38: "39_three_of_cups.json",
+  39: "40_four_of_cups.json",
+  40: "41_five_of_cups.json",
+  41: "42_six_of_cups.json",
+  42: "43_seven_of_cups.json",
+  43: "44_eight_of_cups.json",
+  44: "45_night_of_cups.json",
+  45: "46_ten_of_cups.json",
+  46: "47_page_of_cups.json",
+  47: "48_knight_of_cups.json",
+  48: "49_queen_of_cups.json",
+  49: "50_king_of_cups.json",
+
+  // Swords
+  50: "51_ace_of_swords.json",
+  51: "52_two_of_swords.json",
+  52: "53_three_of_swords.json",
+  53: "54_four_of_swords.json",
+  54: "55_five_of_swords.json",
+  55: "56_six_of_swords.json",
+  56: "57_seven_of_swords.json",
+  57: "58_eight_of_swords.json",
+  58: "59_night_of_swords.json",
+  59: "60_ten_of_swords.json",
+  60: "61_page_of_swords.json",
+  61: "62_knight_of_swords.json",
+  62: "63_queen_of_swords.json",
+  63: "64_king_of_swords.json",
+
+  // Pentacles
+  64: "65_ace_of_pentacles.json",
+  65: "66_two_of_pentacles.json",
+  66: "67_three_of_pentacles.json",
+  67: "68_four_of_pentacles.json",
+  68: "69_five_of_pentacles.json",
+  69: "70_six_of_pentacles.json",
+  70: "71_seven_of_pentacles.json",
+  71: "72_eight_of_pentacles.json",
+  72: "73_night_of_pentacles.json",
+  73: "74_ten_of_pentacles.json",
+  74: "75_page_of_pentacles.json",
+  75: "76_knight_of_pentacles.json",
+  76: "77_queen_of_pentacles.json",
+  77: "78_king_of_pentacles.json"
+};
+
+// 載入塔羅牌 JSON 資料
+// Chat_room.html 內的 loadTarotData 修正
+async function loadTarotData() {
+  try {
+    // 確保這裡遍歷 78 張牌
+    for (let i = 0; i < 78; i++) {
+      let fileName = tarotFileMap[i]; 
+      if (!fileName) continue;
+
+      // 1. 檢查路徑：確保資料夾名稱是 cards_json 且在正確位置
+      const response = await fetch(`cards_json/${fileName}`);
+      if (response.ok) {
+        const data = await response.json();
+        // 2. 存入陣列，索引 i 必須與 Table.html 傳回的卡牌編號一致
+        tarotData[i] = data;
+      } else {
+        console.error(`無法讀取檔案: ${fileName}`);
+      }
+    }
+    console.log("所有塔羅牌資料載入完成", tarotData);
+  } catch (error) {
+    console.error("載入流程發生錯誤:", error);
+  }
+}
+
+// 顯示卡牌資訊
+async function displayCards(cards, orientations) {
+  cardContainer.innerHTML = ''; 
+
+  for (let i = 0; i < cards.length; i++) {
+    const num = cards[i];
+    const orientation = orientations[i];
+    
+    // 建立顯示元件
+    const cardDisplay = document.createElement('div');
+    cardDisplay.className = 'card-display';
+    
+    // 1. 強制確保拿到資料
+    let cardData = tarotData[num];
+    if (!cardData) {
+      const fileName = tarotFileMap[num];
+      if (fileName) {
+        try {
+          const response = await fetch(`cards_json/${fileName}`);
+          if (response.ok) {
+            cardData = await response.json();
+            tarotData[num] = cardData; // 存入緩存供下次使用
+          }
+        } catch (e) { console.error("讀取 JSON 失敗", e); }
+      }
+    }
+
+    // 2. 準備圖片 (1為正, 0為逆)
+    const img = document.createElement('img');
+    img.src = `cards_pic/${num + 1}.jpeg`; // 圖片編號通常是 1-78
+    img.style.transform = (orientation === 0) ? 'rotate(180deg)' : 'rotate(0deg)';
+
+    // 3. 準備文字
+    const cardInfo = document.createElement('div');
+    cardInfo.className = 'card-info';
+
+    const cardName = document.createElement('div');
+    cardName.className = 'card-name';
+    // 這裡從 JSON 的 name_zh 欄位抓取
+    cardName.textContent = cardData ? cardData.name_zh : `未知卡牌(${num + 1})`;
+
+    const orientationText = document.createElement('div');
+    orientationText.className = `card-orientation ${orientation === 1 ? 'upright' : 'reversed'}`;
+    orientationText.textContent = orientation === 1 ? '正位' : '逆位';
+
+    cardInfo.appendChild(cardName);
+    cardInfo.appendChild(orientationText);
+    cardDisplay.appendChild(img);
+    cardDisplay.appendChild(cardInfo);
+    cardContainer.appendChild(cardDisplay);
+  }
+}
+
+// 監聽來自 Table.html 的訊息
+window.addEventListener('message', async (event) => {
+  if (event.data.type === 'analysis_complete') {
+    const cards = event.data.cards;
+    const orientations = event.data.orientations;
+    
+    // 隱藏 iframe
+    tableFrame.style.display = 'none';
+    backBtn.style.display = 'none';
+    chat.style.display = 'flex';
+    
+    // 顯示選中的卡牌
+    if (cards.length > 0) {
+      displayCards(cards, orientations);
+    }
+    
+    // 開始塔羅分析
+    await callTarotAI(userQuestion, cards, orientations);
+    
+    // 分析完成後重新啟用輸入
+    userInput.disabled = false;
+    sendBtn.disabled = false;
+    userInput.placeholder = '還有其他想問的嗎?';
+  }
+});
+
+// 初始化
+loadTarotData();
+
+backBtn.addEventListener('click', () => {
+  try {
+    const iframeWindow = tableFrame.contentWindow;
+    const selectedCards = iframeWindow.selectedCards || [];
+    const selectedOrientations = iframeWindow.selectedOrientations || [];
+
+    if (selectedCards.length > 0) {
+      displayCards(selectedCards, selectedOrientations);
+    }
+  } catch (e) {
+    console.error("無法從 iframe 讀取資料", e);
+  }
+
+  tableFrame.style.display = 'none';
+  backBtn.style.display = 'none';
+  chat.style.display = 'flex';
+  
+  // 重新啟用輸入
+  userInput.disabled = false;
+  sendBtn.disabled = false;
+});
+</script>
+
+</body>
+</html>

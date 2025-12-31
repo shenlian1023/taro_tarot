@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tarot Card Table</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont;
+      color: #e6d5ff;
+      overflow: hidden;
+    }
+
+    /* 星空背景 */
+    #starfield {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+      z-index: 0;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    .shooting-star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
+      animation: shoot 3s linear infinite;
+    }
+
+    @keyframes shoot {
+      0% {
+        transform: translateX(0) translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(-300px) translateY(300px);
+        opacity: 0;
+      }
+    }
+
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.2;
+      animation: float 20s infinite ease-in-out;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(150px, -120px) scale(1.2); }
+      66% { transform: translate(-150px, 120px) scale(0.8); }
+    }
+
+    .container {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      font-weight: 300;
+      font-size: 32px;
+      letter-spacing: 0.2em;
+      margin-bottom: 60px;
+      text-shadow: 
+        0 0 20px rgba(138, 43, 226, 0.6),
+        0 0 40px rgba(138, 43, 226, 0.4),
+        0 0 60px rgba(138, 43, 226, 0.2);
+      animation: titleGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes titleGlow {
+      0%, 100% { 
+        text-shadow: 
+          0 0 20px rgba(138, 43, 226, 0.6),
+          0 0 40px rgba(138, 43, 226, 0.4),
+          0 0 60px rgba(138, 43, 226, 0.2);
+      }
+      50% { 
+        text-shadow: 
+          0 0 30px rgba(138, 43, 226, 0.8),
+          0 0 60px rgba(138, 43, 226, 0.6),
+          0 0 90px rgba(138, 43, 226, 0.4);
+      }
+    }
+
+    .table {
+      position: relative;
+      width: 700px;
+      height: 260px;
+      margin: 0 auto;
+    }
+
+    .table.fan {
+      display: block;
+    }
+
+    .card {
+      position: absolute;
+      width: 120px;
+      height: 190px;
+      perspective: 1000px;
+      cursor: pointer;
+      transform-origin: bottom center;
+      transform: translateY(var(--left)) rotate(var(--angle));
+      transition: transform 0.3s ease, filter 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card.hoverable:hover {
+      transform: translateY(-40px) rotate(var(--angle)) scale(1.08);
+      z-index: 150;
+      filter: brightness(1.2) drop-shadow(0 0 25px rgba(138, 43, 226, 0.8));
+    }
+
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.6s ease;
+    }
+
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.7),
+        0 0 20px rgba(138, 43, 226, 0.3);
+    }
+
+    .card-back {
+      background-image: url('Card_back.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      border: 2px solid rgba(138, 43, 226, 0.4);
+      box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.7),
+        0 0 30px rgba(138, 43, 226, 0.5),
+        inset 0 0 20px rgba(138, 43, 226, 0.2);
+    }
+
+    .card-front {
+      background-color: #f5f5f5;
+      color: #222;
+      transform: rotateY(180deg);
+      border-radius: 16px;
+      box-sizing: border-box;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      padding: 0;
+      border: 3px solid rgba(255, 215, 0, 0.6);
+      box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.8),
+        0 0 30px rgba(255, 215, 0, 0.4);
+    }
+
+    #buttonContainer {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      pointer-events: none;
+      margin-top: 80px;
+    }
+
+    .action-btn {
+      padding: 20px 50px;
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: 5px;
+      cursor: pointer;
+      color: #e6d5ff;
+      background: rgba(138, 43, 226, 0.2);
+      border: 2px solid rgba(147, 112, 219, 0.6);
+      border-radius: 15px;
+      backdrop-filter: blur(15px);
+      box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.5),
+        0 0 40px rgba(138, 43, 226, 0.4);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+      margin: 0 15px;
+      pointer-events: auto;
+    }
+
+    .action-btn:hover {
+      background: rgba(138, 43, 226, 0.4);
+      border-color: rgba(147, 112, 219, 1);
+      color: #ffffff;
+      box-shadow: 
+        0 12px 35px rgba(0, 0, 0, 0.7),
+        0 0 80px rgba(138, 43, 226, 0.8);
+      transform: translateY(-3px) scale(1.02);
+      letter-spacing: 8px;
+    }
+
+    .action-btn:active {
+      transform: translateY(0) scale(0.98);
+      background: rgba(138, 43, 226, 0.5);
+    }
+
+    #analyzeBtn {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 165, 0, 0.3));
+      border-color: rgba(255, 215, 0, 0.6);
+      animation: analyzePulse 3s ease-in-out infinite;
+    }
+
+    @keyframes analyzePulse {
+      0%, 100% {
+        box-shadow: 
+          0 8px 25px rgba(0, 0, 0, 0.5),
+          0 0 40px rgba(255, 215, 0, 0.4);
+      }
+      50% {
+        box-shadow: 
+          0 8px 30px rgba(0, 0, 0, 0.6),
+          0 0 60px rgba(255, 215, 0, 0.6);
+      }
+    }
+
+    #analyzeBtn:hover {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.5), rgba(255, 165, 0, 0.5));
+      border-color: rgba(255, 215, 0, 1);
+      box-shadow: 
+        0 12px 35px rgba(0, 0, 0, 0.7),
+        0 0 80px rgba(255, 215, 0, 0.8);
+    }
+
+    .card.flipped .card-face {
+      animation: cardReveal 0.6s ease-out;
+    }
+
+    @keyframes cardReveal {
+      0% {
+        filter: brightness(2) saturate(0);
+      }
+      100% {
+        filter: brightness(1) saturate(1);
+      }
+    }
+
+    .mystic-circle {
+      position: absolute;
+      width: 800px;
+      height: 800px;
+      border: 2px solid rgba(138, 43, 226, 0.2);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: rotate 60s linear infinite;
+    }
+
+    .mystic-circle::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border: 1px solid rgba(138, 43, 226, 0.15);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    @keyframes rotate {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* 星座連線等待畫面 */
+    #constellation-loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, rgba(27, 39, 53, 0.98), rgba(9, 10, 15, 0.98));
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+
+    #constellation-loading.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .constellation-container {
+      position: relative;
+      width: 500px;
+      height: 500px;
+    }
+
+    .constellation-star {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+      opacity: 0;
+      animation: starAppear 0.5s ease-out forwards;
+    }
+
+    @keyframes starAppear {
+      from {
+        opacity: 0;
+        transform: scale(0);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .constellation-line {
+      position: absolute;
+      height: 2px;
+      background: linear-gradient(90deg, 
+        rgba(138, 43, 226, 0) 0%,
+        rgba(138, 43, 226, 0.8) 50%,
+        rgba(138, 43, 226, 0) 100%);
+      transform-origin: left center;
+      opacity: 0;
+    }
+
+    .constellation-line.drawing {
+      animation: drawLine 1s ease-out forwards;
+    }
+
+    @keyframes drawLine {
+      from {
+        opacity: 0;
+        width: 0;
+      }
+      to {
+        opacity: 1;
+        width: var(--line-length);
+      }
+    }
+
+    .loading-text {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      letter-spacing: 3px;
+      color: #e6d5ff;
+      text-shadow: 0 0 20px rgba(138, 43, 226, 0.6);
+      animation: textPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes textPulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 星空背景 -->
+  <div id="starfield"></div>
+  
+  <!-- 神秘圓環 -->
+  <div class="mystic-circle"></div>
+
+  <!-- 星座連線等待畫面 -->
+  <div id="constellation-loading">
+    <div class="constellation-container" id="constellation-container"></div>
+    <div class="loading-text">正在解讀命運的訊息...</div>
+  </div>
+
+  <div class="container">
+    <h1 id="title">請用心憑直覺選擇三張牌</h1>
+    <div class="table fan" id="table"></div>
+
+    <div id="buttonContainer">
+      <button id="analyzeBtn" class="action-btn">開始分析</button>
+      <button id="resetBtn" class="action-btn">再抽一次</button>
+    </div>
+  </div>
+
+  <script>
+    // 創建星空
+    function createStarfield() {
+      const starfield = document.getElementById('starfield');
+      
+      for (let i = 0; i < 4; i++) {
+        const orb = document.createElement('div');
+        orb.className = 'glow-orb';
+        orb.style.width = Math.random() * 400 + 250 + 'px';
+        orb.style.height = orb.style.width;
+        orb.style.left = Math.random() * 100 + '%';
+        orb.style.top = Math.random() * 100 + '%';
+        orb.style.animationDelay = Math.random() * 10 + 's';
+        
+        const colors = [
+          'rgba(138, 43, 226, 0.3)',
+          'rgba(75, 0, 130, 0.3)',
+          'rgba(147, 112, 219, 0.3)',
+          'rgba(123, 104, 238, 0.3)'
+        ];
+        orb.style.background = colors[i % colors.length];
+        
+        starfield.appendChild(orb);
+      }
+      
+      for (let i = 0; i < 300; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.animationDelay = Math.random() * 3 + 's';
+        star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        starfield.appendChild(star);
+      }
+      
+      for (let i = 0; i < 5; i++) {
+        const shootingStar = document.createElement('div');
+        shootingStar.className = 'shooting-star';
+        shootingStar.style.left = Math.random() * 100 + '%';
+        shootingStar.style.top = Math.random() * 50 + '%';
+        shootingStar.style.animationDelay = Math.random() * 8 + 's';
+        shootingStar.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        starfield.appendChild(shootingStar);
+      }
+    }
+
+    // 創建北斗七星連線動畫
+    function createConstellation() {
+      const container = document.getElementById('constellation-container');
+      container.innerHTML = '';
+
+      // 北斗七星的點位置 (勺子形狀)
+      const starPositions = [
+        { x: 100, y: 150, size: 10 },  // 天樞
+        { x: 150, y: 120, size: 9 },   // 天璇
+        { x: 220, y: 100, size: 9 },   // 天璣
+        { x: 290, y: 110, size: 8 },   // 天權
+        { x: 340, y: 180, size: 9 },   // 玉衡
+        { x: 380, y: 260, size: 10 },  // 開陽
+        { x: 400, y: 340, size: 9 }    // 搖光
+      ];
+
+      // 創建星星
+      starPositions.forEach((pos, index) => {
+        const star = document.createElement('div');
+        star.className = 'constellation-star';
+        star.style.left = pos.x + 'px';
+        star.style.top = pos.y + 'px';
+        star.style.width = pos.size + 'px';
+        star.style.height = pos.size + 'px';
+        star.style.animationDelay = (index * 0.25) + 's';
+        container.appendChild(star);
+      });
+
+      // 創建連線 (依序連接形成勺子)
+      setTimeout(() => {
+        for (let i = 0; i < starPositions.length - 1; i++) {
+          const start = starPositions[i];
+          const end = starPositions[i + 1];
+          
+          const line = document.createElement('div');
+          line.className = 'constellation-line';
+          
+          const dx = end.x - start.x;
+          const dy = end.y - start.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+          
+          line.style.left = start.x + 'px';
+          line.style.top = start.y + 'px';
+          line.style.setProperty('--line-length', length + 'px');
+          line.style.transform = `rotate(${angle}deg)`;
+          line.style.animationDelay = (i * 0.35) + 's';
+          
+          container.appendChild(line);
+          
+          setTimeout(() => {
+            line.classList.add('drawing');
+          }, i * 350);
+        }
+      }, starPositions.length * 250);
+    }
+
+    createStarfield();
+
+    const CARD_COUNT = 78;
+    const table = document.getElementById('table');
+
+    const spreadAngle = 50;
+    const radius = 1200;
+    const centerX = 310;
+    const baseY = 1300;
+
+    let selectedCount = 0;
+    const selectedPositions = [
+      { x: 0, y: -300 },
+      { x: 250, y: -300 },
+      { x: 500, y: -300 }
+    ];
+
+    window.selectedCards = [];
+    window.selectedOrientations = [];
+
+    for (let i = 0; i < CARD_COUNT; i++) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const inner = document.createElement('div');
+      inner.className = 'card-inner';
+
+      const back = document.createElement('div');
+      back.className = 'card-face card-back';
+
+      const front = document.createElement('div');
+      front.className = 'card-face card-front';
+      front.style.backgroundImage = `url('cards_pic/${i+1}.jpeg')`;
+      front.style.backgroundSize = 'cover';
+      front.style.backgroundPosition = 'center';
+      front.style.backgroundRepeat = 'no-repeat';
+
+      inner.appendChild(back);
+      inner.appendChild(front);
+      card.appendChild(inner);
+
+      const angle = -spreadAngle / 2 + (spreadAngle / (CARD_COUNT - 1)) * i;
+      const rad = (angle * Math.PI) / 180;
+      const x = centerX + radius * Math.sin(rad);
+      const y = baseY - radius * Math.cos(rad);
+
+      card.style.left = `${x}px`;
+      card.style.top = `${y}px`;
+      card.style.setProperty('--angle', `${angle}deg`);
+      card.style.setProperty('--left', '0px');
+      card.classList.add('hoverable');
+
+      card.dataset.initLeft = `${x}px`;
+      card.dataset.initTop = `${y}px`;
+      card.dataset.initAngle = `${angle}deg`;
+
+      card.addEventListener('click', () => {
+        if (card.classList.contains('flipped')) {
+          return;
+        }
+        if (selectedCount >= 3) {
+          return;
+        }
+        card.classList.remove('hoverable');
+        card.classList.add('flipped');
+
+        const isUpright = Math.random() < 0.5 ? 1 : 0;
+        window.selectedOrientations.push(isUpright);
+        if (isUpright === 0) {
+          front.style.transform = 'rotateY(180deg) rotateZ(180deg)';
+        }
+
+        const pos = selectedPositions[selectedCount];
+        card.style.left = `${pos.x}px`;
+        card.style.top = `${pos.y}px`;
+        card.style.transform = `rotate(${0}deg)`;
+
+        card.style.zIndex = 200 + selectedCount;
+
+        window.selectedCards.push(i);
+
+        if (selectedCount === 0) {
+          title.style.transition = 'opacity 0.5s';
+          title.style.opacity = '0';
+        }
+
+        selectedCount++;
+
+        if (selectedCount === 3) {
+          const cards = document.querySelectorAll('.card');
+          cards.forEach(c => {
+            if (!c.classList.contains('flipped')) {
+              c.style.transition = 'opacity 0.5s';
+              c.style.opacity = '0';
+            }
+          });
+
+          // 顯示按鈕容器
+          const buttonContainer = document.getElementById('buttonContainer');
+          buttonContainer.style.display = 'block';
+          buttonContainer.style.opacity = '0';
+          setTimeout(() => {
+            buttonContainer.style.transition = 'opacity 0.5s';
+            buttonContainer.style.opacity = '1';
+          }, 100);
+        }
+      });
+
+      table.appendChild(card);
+    }
+
+    // 開始分析按鈕
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    analyzeBtn.addEventListener('click', () => {
+      // 顯示星座連線動畫
+      const loading = document.getElementById('constellation-loading');
+      loading.classList.add('active');
+      createConstellation();
+
+      // 模擬等待 LLM 回應 (這裡你之後要接入真實的 API)
+      setTimeout(() => {
+        // 回到父頁面 (Chat_room.html)
+        window.parent.postMessage({
+          type: 'analysis_complete',
+          cards: window.selectedCards,
+          orientations: window.selectedOrientations
+        }, '*');
+      }, 5000); // 5秒後完成 (實際應該等 API 回應)
+    });
+
+    // 重新抽牌按鈕
+    const resetBtn = document.getElementById('resetBtn');
+    resetBtn.addEventListener('click', () => {
+      selectedCount = 0;
+      window.selectedCards = [];
+      window.selectedOrientations = [];
+
+      title.style.opacity = '1';
+
+      const buttonContainer = document.getElementById('buttonContainer');
+      buttonContainer.style.display = 'none';
+
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.style.opacity = '1';
+        card.classList.add('hoverable');
+        card.classList.remove('flipped');
+        card.style.left = card.dataset.initLeft;
+        card.style.top = card.dataset.initTop;
+        card.style.transform = `rotate(${card.dataset.initAngle})`;
+        card.style.zIndex = '';
+        const front = card.querySelector('.card-front');
+        front.style.transform = 'rotateY(180deg)';
+      });
+    });
+  </script>
+</body>
+</html>
