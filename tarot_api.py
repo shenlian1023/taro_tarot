@@ -24,6 +24,8 @@ from flask_cors import CORS
 API_KEY_FILE = "APIKEY.txt"
 JSON_FOLDER = "cards_json"
 OUTPUT_FOLDER = "outputs"
+HISTORY_FOLDER = "Chat_History"
+HISTORY_TAIL_MESSAGES = 30   # 只取最後 30 則訊息（可調
 
 MODEL_NAME = "gemma3:4b"
 API_URL = "https://api-gateway.netdb.csie.ncku.edu.tw/api/generate"
@@ -110,6 +112,54 @@ def parse_dialogue_json(text: str) -> List[str]:
     except:
         return []
 
+def load_history_by_session(session_id: str) -> Dict[str, Any]:
+    """
+    讀取 Chat_History/{session_id}.json
+    你 chat_api 存的是 conversation list:
+      [{"role":"user","content":"..."}, ...]
+    也可能包含 system / assistant。
+    """
+    if not session_id:
+        return {"found": False, "messages": [], "note": "missing session_id"}
+
+    fp = os.path.join(HISTORY_FOLDER, f"{session_id}.json")
+    if not os.path.exists(fp):
+        return {"found": False, "messages": [], "note": f"history file not found: {fp}"}
+
+    try:
+        with open(fp, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # data 可能就是 list，也可能是 dict（你之後若換格式）
+        if isinstance(data, list):
+            msgs = data
+        elif isinstance(data, dict) and "conversation" in data and isinstance(data["conversation"], list):
+            msgs = data["conversation"]
+        else:
+            msgs = []
+        return {"found": True, "messages": msgs, "path": fp}
+    except Exception as e:
+        return {"found": False, "messages": [], "note": f"history read error: {e}"}
+
+def format_history_for_rag(history_messages: List[Dict[str, Any]], tail: int = HISTORY_TAIL_MESSAGES) -> str:
+    """
+    把 history list 轉成可餵給 LLM 的短文本。
+    - 只取最後 tail 則
+    - 過長 content 做截斷
+    """
+    if not history_messages:
+        return "（無聊天歷史可用）"
+
+    tail_msgs = history_messages[-tail:] if len(history_messages) > tail else history_messages
+
+    lines = []
+    for m in tail_msgs:
+        role = str(m.get("role", "unknown"))
+        content = str(m.get("content", "")).strip()
+        if len(content) > 300:
+            content = content[:300] + "…(截斷)"
+        lines.append(f"{role}: {content}")
+    return "\n".join(lines)
+
 # ================= 抽牌 =================
 
 def random_draw_three(db: List[Dict[str, Any]]) -> List[Dict[str, str]]:
@@ -138,23 +188,26 @@ PERSONA_PROMPT = """
 """.strip()
 
 
-def prompt_skeleton(question: str) -> str:
-    return f"""
-{CORE_PROMPT}
-請只回傳 JSON，作為內部理解。
+def prompt_skeleton(question: str, rag_block: str) -> str:
+    return f"""{CORE_PROMPT}
+以下內容僅作為內部理解，請勿逐字提及。
 
-【問題】
-{question}
+{rag_block}
+
+請只回傳 JSON，作為內部理解。
 """.strip()
 
 
-def prompt_phase(skeleton: str, card: Dict[str, str], desc: str) -> str:
+def prompt_phase(
+    skeleton: str,
+    card: Dict[str, Any],
+    desc: str
+) -> str:
     orientation = "正位" if card["orientation"] == "upright" else "逆位"
-    return f"""
-{CORE_PROMPT}
+    return f"""{CORE_PROMPT}
 {PERSONA_PROMPT}
 
-你現在只談「{desc}」。
+你現在只談「{desc}」，並且必須緊扣使用者問題。
 
 【目前的牌】
 {card['position']}：{card['name']}（{orientation}）
@@ -173,15 +226,14 @@ JSON array：
 
 【骨架】
 {skeleton}
-""".strip()
+"""
 
 
 def prompt_actions(skeleton: str) -> str:
     return f"""
 {CORE_PROMPT}
 {PERSONA_PROMPT}
-
-請給出行動提醒。
+請根據目前的理解，給出行動提醒。
 
 【輸出格式】
 JSON array：
@@ -192,15 +244,51 @@ JSON array：
 【規則】
 - 共 4 則
 - 每則 ≤ 25 個中文字
+【骨架】
+{skeleton}
 """.strip()
 
+def load_selected_cards_meanings(cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    meanings = []
+    for c in cards:
+        name = c.get("name")
+        orientation = c.get("orientation")
+        meanings.append({
+            "name": name,
+            "orientation": orientation,
+            "note": "牌意請依 cards_json 原始檔解讀"
+        })
+    return meanings
 
+def build_rag_block(question: str, cards_meanings: List[Dict[str, Any]], history_text: str) -> str:
+    return f"""
+【使用者問題】
+{question}
+
+【聊天歷史摘要】
+{history_text}
+
+【三張牌牌意參考】
+{json.dumps(cards_meanings, ensure_ascii=False, indent=2)}
+""".strip()
 # ================= Pipeline =================
 
-def generate_dialogue(question: str, cards: List[Dict[str, str]]) -> Dict[str, Any]:
-    skeleton = call_llm(prompt_skeleton(question), TEMP_SKELETON, TOKENS_SKELETON)
+def generate_dialogue(question: str, cards: List[Dict[str, Any]], session_id: str) -> Dict[str, Any]:
+    # 1) 讀 history
+    history_obj = load_history_by_session(session_id)
+    history_text = format_history_for_rag(history_obj.get("messages", []))
 
-    dialogue = []
+    # 2) 讀三張牌的牌意 json
+    cards_meanings = load_selected_cards_meanings(cards)
+
+    # 3) 組 RAG block
+    rag_block = build_rag_block(question, cards_meanings, history_text)
+
+    # 4) skeleton
+    skeleton = call_llm(prompt_skeleton(question, rag_block), TEMP_SKELETON, TOKENS_SKELETON)
+
+    # 5) 三段解讀
+    dialogue: List[str] = []
     for desc, card in zip(
         ["回顧過去的狀態", "目前卡住的狀態", "接下來可能的走向"],
         cards
@@ -212,17 +300,24 @@ def generate_dialogue(question: str, cards: List[Dict[str, str]]) -> Dict[str, A
         )
         dialogue.extend(parse_dialogue_json(raw))
 
+    # 6) 行動提醒
     actions = parse_dialogue_json(
         call_llm(prompt_actions(skeleton), TEMP_ACTIONS, TOKENS_ACTIONS)
     )
 
     return {
+        "session_id": session_id,
         "question": question,
         "cards": cards,
+        "rag": {
+            "history_found": history_obj.get("found", False),
+            "history_path": history_obj.get("path", None),
+            "history_used_tail": HISTORY_TAIL_MESSAGES,
+            "cards_meanings_included": True
+        },
         "dialogue": dialogue,
         "actions": actions
     }
-
 
 # ================= 輸出 JSON =================
 
@@ -312,7 +407,7 @@ def analyze_tarot():
             return jsonify({"error": "card data length must be 3"}), 400
 
         cards = translate_frontend_input_to_v3_cards(card_ids, orientations)
-        result = generate_dialogue(question, cards)
+        result = generate_dialogue(question, cards, session_id)
 
         # 儲存占卜結果（與聊天共用 session_id）
         saved_path = save_result_json(result, session_id)

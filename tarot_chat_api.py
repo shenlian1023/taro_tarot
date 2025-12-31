@@ -147,10 +147,7 @@ def normal_chat():
     if awaiting_question:
         conversation.append({"role": "user", "content": user_input})
         saved_path = save_conversation(session_id, conversation)
-
         session["state"] = "chat"
-
-        result["reply"] = f"問題已收到（已儲存），正在為您準備占卜..."
         result["awaiting_question"] = False
         result["saved_path"] = saved_path
         return jsonify(result)
@@ -167,6 +164,20 @@ def normal_chat():
 
     result["reply"] = reply
     return jsonify(result)
+
+def end_divination():
+    data = request.get_json(silent=True) or {}
+    session_id = data.get("session_id")
+
+    if not session_id or session_id not in sessions:
+        return jsonify({"error": "invalid session"}), 400
+
+    sessions[session_id]["state"] = "chat"
+
+    return jsonify({
+        "ok": True,
+        "message": "已回到一般聊天模式"
+    })
 
 # =========================================================
 # 主啟動點

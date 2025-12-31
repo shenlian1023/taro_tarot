@@ -629,6 +629,7 @@ async function callTarotAI(text, cards, orientations) {
   } catch (error) {
     console.error("API 連線失敗:", error);
     appendMessageWithDelay('ai', "能量感應失敗,請確認後端伺服器已啟動。", 0);
+    return false;
   }
 }
 
@@ -640,7 +641,6 @@ startQuestionBtn.addEventListener('click', async () => {
   startQuestionBtn.style.display = 'none';
 
   const respText = await callNormalAI("__START_QUESTION__");
-  await appendMessageWithDelay('ai', respText, 300);
   // 顯示介紹訊息
   await appendMessageWithDelay('ai', '很好,讓我們進入正式的塔羅占卜。', 500);
   await appendMessageWithDelay('ai', '📝 首先,請在下方輸入你想詢問的問題', 1000);
@@ -884,27 +884,41 @@ async function displayCards(cards, orientations) {
 
 // 監聽來自 Table.html 的訊息
 window.addEventListener('message', async (event) => {
-  if (event.data.type === 'analysis_complete') {
-    const cards = event.data.cards;
-    const orientations = event.data.orientations;
-    
+  if (event.data.type !== 'analysis_complete') return;
+
+  const cards = event.data.cards;
+  const orientations = event.data.orientations;
+
+  try {
     // 隱藏 iframe
     tableFrame.style.display = 'none';
     backBtn.style.display = 'none';
     chat.style.display = 'flex';
-    
+
     // 顯示選中的卡牌
     if (cards.length > 0) {
       displayCards(cards, orientations);
     }
-    
+
     // 開始塔羅分析
     await callTarotAI(userQuestion, cards, orientations);
-    
-    // 分析完成後重新啟用輸入
+
+    // 告知後端占卜結束
+    await fetch("http://localhost:8001/end_divination", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+
+  } catch (err) {
+    console.error("analysis_complete 發生錯誤", err);
+  } finally {
+    questionMode = false;
+    userQuestion = '';
     userInput.disabled = false;
     sendBtn.disabled = false;
     userInput.placeholder = '還有其他想問的嗎?';
+    userInput.focus();
   }
 });
 
