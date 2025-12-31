@@ -53,14 +53,17 @@
 
 ```bash
 pip install flask flask-cors
+```
 
 ## 啟動方式
 1. 啟動聊天模式後端（Port 8001）
 ```bash
 python tarot_chat_api.py
+```
 2. 啟動正式占卜後端（Port 5005）
 ```bash
 python tarot_api.py
+```
 3. 開啟前端介面
 - 使用瀏覽器直接開啟：Chat_room_ui.html（建議使用 Chrome 或 Edge）
 
