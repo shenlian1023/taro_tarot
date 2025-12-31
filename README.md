@@ -41,7 +41,7 @@
 ├── cards_json/              # 78張塔羅牌的牌義解說 JSON
 ├── cards_pic/               # 78張塔羅牌的圖片檔  
 └── README.md
-```text
+```
 
 ## 環境需求
 
