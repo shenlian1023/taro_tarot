@@ -33,8 +33,8 @@ TEMP_DIALOGUE = 0.55
 TEMP_ACTIONS = 0.4
 
 TOKENS_SKELETON = 350
-TOKENS_DIALOGUE = 320   # 🔧 加大
-TOKENS_ACTIONS = 220    # 🔧 加大
+TOKENS_DIALOGUE = 320
+TOKENS_ACTIONS = 220
 
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
@@ -65,7 +65,9 @@ def load_tarot_database() -> List[Dict[str, Any]]:
 
 
 # API_KEY = load_api_key()
-API_KEY = "f84f4e9735f7b6cc351a61d41224a7a220947aebdfa37e62581fba3e4fc1fbfa"
+API_KEY = load_api_key()
+if not API_KEY:
+    raise RuntimeError("❌ 找不到 APIKEY.txt")
 TAROT_DB = load_tarot_database()
 TAROT_ID_INDEX = {card["id"]: card for card in TAROT_DB if "id" in card}
 
@@ -224,12 +226,12 @@ def generate_dialogue(question: str, cards: List[Dict[str, str]]) -> Dict[str, A
 
 # ================= 輸出 JSON =================
 
-def save_result_json(result: Dict[str, Any]):
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(OUTPUT_FOLDER, f"tarot_api_output.json")
+def save_result_json(result: Dict[str, Any], session_id: str):
+    path = os.path.join(OUTPUT_FOLDER, f"{session_id}.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-    print(f"📄 已輸出結果檔：{path}")
+    print(f"📄 已輸出占卜結果：{path}")
+    return path
 
 
 # ================= Terminal =================
@@ -285,27 +287,6 @@ def translate_frontend_input_to_v3_cards(
 
     return cards
 
-
-# ================= Main =================
-
-# if __name__ == "__main__":
-#     question = "目前這段感情狀態，對我未來半年的影響是什麼？"
-
-#     # 🔹 前端輸入
-#     card_ids = [35, 33, 1]
-#     orientations = [1, 0, 1]
-
-#     # 🔹 轉譯成 v3 cards 結構
-#     cards = translate_frontend_input_to_v3_cards(card_ids, orientations)
-
-#     result = generate_dialogue(question, cards)
-
-#     # save_result_json(result)
-#     # terminal_simulate(result)
-
-
-
-
 # ================= Flask =================
 
 app = Flask(__name__)
@@ -314,25 +295,42 @@ CORS(app) # 允許跨網域請求
 @app.route('/analyze_tarot', methods=['POST'])
 def analyze_tarot():
     try:
-        data = request.json
-        question = data.get('question')
-        card_ids = data.get('card_ids')
-        orientations = data.get('orientations')
+        data = request.get_json(silent=True) or {}
 
-        # 這裡假設你的這些自定義函式運作正常
+        session_id = data.get("session_id")
+        if not session_id:
+            return jsonify({"error": "missing session_id"}), 400
+
+        question = data.get("question", "")
+        card_ids = data.get("card_ids")
+        orientations = data.get("orientations")
+
+        # 基本防呆
+        if not isinstance(card_ids, list) or not isinstance(orientations, list):
+            return jsonify({"error": "invalid card data"}), 400
+        if len(card_ids) != 3 or len(orientations) != 3:
+            return jsonify({"error": "card data length must be 3"}), 400
+
         cards = translate_frontend_input_to_v3_cards(card_ids, orientations)
         result = generate_dialogue(question, cards)
-        
-        # 確保 result["dialogue"] 和 result["actions"] 都是 list
+
+        # 儲存占卜結果（與聊天共用 session_id）
+        saved_path = save_result_json(result, session_id)
+
         full_messages = result.get("dialogue", []) + result.get("actions", [])
-        
-        return jsonify({"messages": full_messages})
+
+        return jsonify({
+            "session_id": session_id,
+            "messages": full_messages,
+            "saved_path": saved_path
+        })
+
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     print("🌟 塔羅後端伺服器啟動中：http://localhost:5005")
-    app.run(host='0.0.0.0', port=5005, debug=True)
+    app.run(host='0.0.0.0', port=5005, debug=False)
 
     

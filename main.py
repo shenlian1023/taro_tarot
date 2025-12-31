@@ -1,50 +1,33 @@
-# main.py
-# ===============================
-# 啟動整個塔羅占卜系統（聊天 + 占卜）
-# ===============================
+from flask import Flask, send_from_directory
+from flask_cors import CORS
+import threading
+from tarot_api import app as tarot_app
+from tarot_chat_api import app as chat_app
+import os
 
-import multiprocessing
-import sys
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+app = Flask(__name__, static_folder=BASE_DIR)
+CORS(app)
 
-def run_chat_server():
-    """啟動聊天模式後端（Port 8001）"""
-    import tarot_chat_api
-    tarot_chat_api.app.run(
-        host="0.0.0.0",
-        port=8001,
-        debug=False,
-        use_reloader=False
-    )
+# ===== 前端 =====
+@app.route("/")
+def index():
+    return send_from_directory(BASE_DIR, "Chat_room_ui.html")
 
+@app.route("/<path:path>")
+def static_files(path):
+    return send_from_directory(BASE_DIR, path)
 
-def run_tarot_server():
-    """啟動正式占卜後端（Port 5005）"""
-    import tarot_api
-    tarot_api.app.run(
-        host="0.0.0.0",
-        port=5005,
-        debug=False,
-        use_reloader=False
-    )
+# ===== 啟動兩個後端 =====
+def run_chat():
+    chat_app.run(port=8001, debug=False, use_reloader=False)
 
+def run_tarot():
+    tarot_app.run(port=5005, debug=False, use_reloader=False)
 
 if __name__ == "__main__":
-    print("啟動塔羅占卜系統中...")
-    print("聊天模式後端：http://localhost:8001")
-    print("占卜分析後端：http://localhost:5005")
-    print("（Ctrl+C 可同時關閉所有服務）\n")
-
-    try:
-        chat_process = multiprocessing.Process(target=run_chat_server)
-        tarot_process = multiprocessing.Process(target=run_tarot_server)
-
-        chat_process.start()
-        tarot_process.start()
-
-        chat_process.join()
-        tarot_process.join()
-
-    except KeyboardInterrupt:
-        print("\n收到中斷指令，關閉所有服務...")
-        sys.exit(0)
+    threading.Thread(target=run_chat).start()
+    threading.Thread(target=run_tarot).start()
+    print("🌟 前端 + 後端整合啟動：http://localhost:8080")
+    app.run(port=8080, debug=False)

@@ -651,6 +651,7 @@
         // 回到父頁面 (Chat_room.html)
         window.parent.postMessage({
           type: 'analysis_complete',
+          session_id: parent.sessionId,
           cards: window.selectedCards,
           orientations: window.selectedOrientations
         }, '*');

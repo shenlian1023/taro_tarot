@@ -139,7 +139,7 @@ def normal_chat():
             "content": "使用者進入占卜提問階段"
         })
 
-        result["reply"] = "請輸入您要問塔羅的問題"
+        saved_path = save_conversation(session_id, conversation)
         result["awaiting_question"] = True
         return jsonify(result)
 

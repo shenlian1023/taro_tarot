@@ -498,6 +498,7 @@
 <button id="back-button">返回聊天</button>
 
 <script>
+let sessionId = null;
 // 創建星空
 function createStarfield() {
   const starfield = document.getElementById('starfield');
@@ -571,12 +572,19 @@ async function callNormalAI(text) {
     const response = await fetch('http://localhost:8001/normal_chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text })
+      body: JSON.stringify({
+        user_input: text,
+        session_id: sessionId
+})
     });
 
     if (!response.ok) throw new Error("一般聊天伺服器連線異常");
 
     const data = await response.json();
+
+    if (!sessionId && data.session_id) {
+      sessionId = data.session_id;
+    }
     
     // 如果後端回傳狀態是 drawing，你可以選擇在這邊做一些 UI 提示（選配）
     if (data.state === "drawing") {
@@ -599,10 +607,11 @@ async function callTarotAI(text, cards, orientations) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        question: text,
-        card_ids: cards,
-        orientations: orientations
-      })
+      session_id: sessionId,
+      question: text,
+      card_ids: cards,
+      orientations: orientations
+    })
     });
 
 
@@ -629,7 +638,9 @@ startQuestionBtn.addEventListener('click', async () => {
   
   questionMode = true;
   startQuestionBtn.style.display = 'none';
-  
+
+  const respText = await callNormalAI("__START_QUESTION__");
+  await appendMessageWithDelay('ai', respText, 300);
   // 顯示介紹訊息
   await appendMessageWithDelay('ai', '很好,讓我們進入正式的塔羅占卜。', 500);
   await appendMessageWithDelay('ai', '📝 首先,請在下方輸入你想詢問的問題', 1000);
