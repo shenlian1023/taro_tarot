@@ -1,9 +1,7 @@
 import os
 import json
 import uuid
-import random
-import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Optional
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import urllib.request
@@ -17,8 +15,9 @@ API_URL = "https://api-gateway.netdb.csie.ncku.edu.tw/api/generate"
 
 MAX_TOKENS = 1024
 TEMPERATURE = 0.5
+
 # =========================================================
-# 0) 基礎工具
+# 基礎工具
 # =========================================================
 
 def load_api_key() -> Optional[str]:
@@ -33,6 +32,7 @@ if not API_KEY:
     raise RuntimeError("❌ 找不到 APIKEY.txt")
 
 os.makedirs(JSON_FOLDER, exist_ok=True)
+
 # =========================================================
 # LLM 呼叫
 # =========================================================
@@ -63,7 +63,7 @@ def call_llm(prompt: str) -> str:
         return f"[ERROR] {e}"
 
 # =========================================================
-# Prompt 設定（嚴格聊天模式）
+# Prompt（聊天模式）
 # =========================================================
 
 CHAT_MODE_PROMPT = """
@@ -85,90 +85,93 @@ CHAT_MODE_PROMPT = """
 """.strip()
 
 # =========================================================
-# JSON 儲存
+# JSON 儲存（依 session 存）
 # =========================================================
 
-def save_conversation(conversation: list):
-    filename = f"ChatHistory.json"
+def save_conversation(session_id: str, conversation: list):
+    filename = f"{session_id}.json"
     path = os.path.join(JSON_FOLDER, filename)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(conversation, f, ensure_ascii=False, indent=2)
     return path
+
 # =========================================================
-# flask啟動
+# Flask 啟動
 # =========================================================
+
 app = Flask(__name__)
 CORS(app)
 
-# 初始化狀態 (全域管理)
-status = {
-    "state": "chat",
-    "conversation": [],  # 使用 list 儲存 {role, content}
-    "current_question": None
-}
+# 所有使用者的 session 狀態
+sessions = {}
 
-@app.route('/normal_chat', methods=['POST'])
+def get_session(session_id: Optional[str]):
+    if not session_id or session_id not in sessions:
+        session_id = uuid.uuid4().hex
+        sessions[session_id] = {
+            "state": "chat",
+            "conversation": []
+        }
+    return session_id, sessions[session_id]
+
+@app.route("/normal_chat", methods=["POST"])
 def normal_chat():
-    # 1. 獲取前端傳來的資料
     data = request.get_json(silent=True) or {}
     user_input = data.get("user_input", "").strip()
-    conversation = status["conversation"]
-    awaiting_question = (status["state"] == "awaiting_question")
+    session_id = data.get("session_id")
 
-    # 用於回傳前端的結果
+    session_id, session = get_session(session_id)
+    conversation = session["conversation"]
+    awaiting_question = (session["state"] == "awaiting_question")
+
     result = {
         "reply": "",
-        "conversation": conversation,
+        "session_id": session_id,
         "awaiting_question": awaiting_question,
         "saved_path": None
     }
 
-    # === 使用者按下「開始提問」按鈕 ===
+    # === 使用者按下「開始提問」===
     if user_input == "__START_QUESTION__":
-        system_msg = "請輸入您要問塔羅的問題"
-        # conversation.append({"role": "system", "content": system_msg})
-        status["conversation"].append({
-        "role": "system",
-        "content": "使用者進入占卜提問階段"
+        session["state"] = "awaiting_question"
+        conversation.append({
+            "role": "system",
+            "content": "使用者進入占卜提問階段"
         })
 
-        status["state"] = "awaiting_question"
-
-        result["reply"] = system_msg
+        result["reply"] = "請輸入您要問塔羅的問題"
         result["awaiting_question"] = True
         return jsonify(result)
 
-    # === 正在等待使用者輸入「占卜問題」===
+    # === 輸入占卜問題 ===
     if awaiting_question:
         conversation.append({"role": "user", "content": user_input})
-        
-        # 呼叫你原本的存檔函式
-        saved_path = save_conversation(conversation)
+        saved_path = save_conversation(session_id, conversation)
 
-        status["state"] = "chat"
-        
-        result["reply"] = f"問題已收到（已儲存至：{saved_path}），正在為您準備占卜..."
+        session["state"] = "chat"
+
+        result["reply"] = f"問題已收到（已儲存），正在為您準備占卜..."
         result["awaiting_question"] = False
         result["saved_path"] = saved_path
         return jsonify(result)
 
-    # === 一般聊天（不存檔）===
+    # === 一般聊天 ===
     conversation.append({"role": "user", "content": user_input})
 
-    # 組合 Prompt 呼叫 LLM (call_llm 需是你定義好的函式)
     prompt = CHAT_MODE_PROMPT + "\n\n"
     for msg in conversation:
         prompt += f"{msg['role']}：{msg['content']}\n"
 
     reply = call_llm(prompt).strip()
-
     conversation.append({"role": "assistant", "content": reply})
 
     result["reply"] = reply
     return jsonify(result)
+
 # =========================================================
 # 主啟動點
 # =========================================================
+
 if __name__ == "__main__":
-    print("🌟 聊天引導後端（Port 8001）正在啟動...")
-    app.run(host='0.0.0.0', port=8001, debug=False)
+    print("🌟 聊天引導後端（Session-safe，Port 8001）啟動中...")
+    app.run(host="0.0.0.0", port=8001, debug=False)
