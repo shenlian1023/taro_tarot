@@ -334,3 +334,5 @@ def analyze_tarot():
 if __name__ == "__main__":
     print("🌟 塔羅後端伺服器啟動中：http://localhost:5005")
     app.run(host='0.0.0.0', port=5005, debug=True)
+
+    
