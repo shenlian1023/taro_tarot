@@ -38,6 +38,8 @@
 - API：校內 API Gateway
 - 使用 Prompt Engineering 控制占卜語氣與結構
 
+---
+
 ## 專案結構說明
 
 ```text
@@ -61,6 +63,7 @@
 │
 └── README.md
 ```
+---
 
 ## 環境需求
 
@@ -73,6 +76,7 @@
 ```bash
 pip install flask flask-cors
 ```
+---
 
 ## 啟動方式
 1. 打開anaconda prompt
@@ -88,6 +92,7 @@ conda activate tarot_venv
 ```bash
 run.bat
 ```
+---
 
 ## 使用流程說明
 1. 開啟畫面後，可先與占卜師自由聊天
@@ -97,7 +102,9 @@ run.bat
 5. 憑直覺選擇三張塔羅牌
 6. 點擊 「開始分析」
 7. 回到聊天室，依序顯示占卜解讀與行動提醒
+
 ---
+
 ## 資料輸出說明
 ### 聊天紀錄
 - 儲存在 Chat_History/{session_id}.json
@@ -108,6 +115,7 @@ run.bat
   - 抽到的三張牌（含正逆位
   - 抽到的三張牌（含正逆位） 抽到 完整占卜對話
   - 結論建議
+
 ---
 
 ## 注意事項
