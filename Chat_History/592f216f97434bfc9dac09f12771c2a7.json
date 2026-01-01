@@ -1,0 +1,14 @@
+[
+  {
+    "role": "system",
+    "content": "使用者進入占卜提問階段"
+  },
+  {
+    "role": "user",
+    "content": "好餓"
+  },
+  {
+    "role": "system",
+    "content": "使用者進入占卜提問階段"
+  }
+]
