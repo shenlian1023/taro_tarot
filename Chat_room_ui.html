@@ -692,7 +692,11 @@ sendBtn.addEventListener('click', async () => {
   else {
     try {
       const aiResponse = await callNormalAI(text);
+      if (aiResponse && aiResponse.trim() !== "") {
       await appendMessageWithDelay('ai', aiResponse, 800);
+    } else {
+      console.warn("⚠️ 忽略空的 AI 回應");
+    }
     } catch (error) {
       await appendMessageWithDelay('ai', "抱歉,我好像走神了...", 800);
     }
