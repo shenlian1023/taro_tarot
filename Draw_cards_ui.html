@@ -470,20 +470,21 @@
       }
     }
 
-    // 創建北斗七星連線動畫
+    // 創建真實的北斗七星連線動畫
     function createConstellation() {
       const container = document.getElementById('constellation-container');
       container.innerHTML = '';
 
-      // 北斗七星的點位置 (勺子形狀)
+      // 真實北斗七星的相對位置（勺子形狀）
+      // 調整位置讓整體居中並更像實際的北斗七星
       const starPositions = [
-        { x: 100, y: 150, size: 10 },  // 天樞
-        { x: 150, y: 120, size: 9 },   // 天璇
-        { x: 220, y: 100, size: 9 },   // 天璣
-        { x: 290, y: 110, size: 8 },   // 天權
-        { x: 340, y: 180, size: 9 },   // 玉衡
-        { x: 380, y: 260, size: 10 },  // 開陽
-        { x: 400, y: 340, size: 9 }    // 搖光
+        { x: 120, y: 180, size: 10, name: '天樞' },  // 勺口1
+        { x: 160, y: 160, size: 9, name: '天璇' },   // 勺口2
+        { x: 200, y: 150, size: 9, name: '天璣' },   // 勺口3
+        { x: 240, y: 155, size: 9, name: '天權' },   // 勺口4 (轉角處)
+        { x: 270, y: 200, size: 8, name: '玉衡' },   // 勺柄1
+        { x: 320, y: 260, size: 9, name: '開陽' },   // 勺柄2
+        { x: 380, y: 310, size: 10, name: '搖光' }   // 勺柄3
       ];
 
       // 創建星星
@@ -494,11 +495,11 @@
         star.style.top = pos.y + 'px';
         star.style.width = pos.size + 'px';
         star.style.height = pos.size + 'px';
-        star.style.animationDelay = (index * 0.25) + 's';
+        star.style.animationDelay = (index * 0.3) + 's';
         container.appendChild(star);
       });
 
-      // 創建連線 (依序連接形成勺子)
+      // 創建連線（依序連接形成勺子）
       setTimeout(() => {
         for (let i = 0; i < starPositions.length - 1; i++) {
           const start = starPositions[i];
@@ -516,15 +517,15 @@
           line.style.top = start.y + 'px';
           line.style.setProperty('--line-length', length + 'px');
           line.style.transform = `rotate(${angle}deg)`;
-          line.style.animationDelay = (i * 0.35) + 's';
+          line.style.animationDelay = (i * 0.4) + 's';
           
           container.appendChild(line);
           
           setTimeout(() => {
             line.classList.add('drawing');
-          }, i * 350);
+          }, i * 400);
         }
-      }, starPositions.length * 250);
+      }, starPositions.length * 300);
     }
 
     createStarfield();
@@ -638,26 +639,16 @@
       table.appendChild(card);
     }
 
-    // 開始分析按鈕
+    // 開始分析按鈕（最終正確版）
     const analyzeBtn = document.getElementById('analyzeBtn');
     analyzeBtn.addEventListener('click', () => {
-      // 顯示星座連線動畫
-      const loading = document.getElementById('constellation-loading');
-      loading.classList.add('active');
-      createConstellation();
-
-      // 模擬等待 LLM 回應 (這裡你之後要接入真實的 API)
-      setTimeout(() => {
-        // 回到父頁面 (Chat_room.html)
-        window.parent.postMessage({
-          type: 'analysis_complete',
-          session_id: parent.sessionId,
-          cards: window.selectedCards,
-          orientations: window.selectedOrientations
-        }, '*');
-      }, 5000); // 5秒後完成 (實際應該等 API 回應)
+      // ✅ 只做一件事：告訴父頁「我選好了」
+      window.parent.postMessage({
+        type: 'analysis_complete',
+        cards: window.selectedCards,
+        orientations: window.selectedOrientations
+      }, '*');
     });
-
     // 重新抽牌按鈕
     const resetBtn = document.getElementById('resetBtn');
     resetBtn.addEventListener('click', () => {

@@ -84,15 +84,83 @@ CHAT_MODE_PROMPT = """
 語氣自然、真誠、像真人對談。
 """.strip()
 
+CHAT_REFLECT_TAROT_FIRST_PROMPT = """
+你是一位塔羅占卜師，正在進行「占卜後的第一次回應」。
+
+【背景】
+- 剛剛已完成一次塔羅占卜分析
+- 系統中已提供占卜摘要，供你理解整體脈絡
+- 使用者正在詢問這次占卜的意義、價值或整體感受
+
+【你的任務】
+- 承接剛剛的占卜內容
+- 將占卜結果「轉譯」成對使用者有意義的理解
+- 協助使用者看見這次占卜對他當下狀態的提醒
+
+【說話方式】
+- 可以簡要回顧占卜中提到的關鍵狀態或主題
+- 不需要逐條解釋牌或重述細節
+- 語氣溫和、真誠，像是在幫對方「整理剛聽到的話」
+
+【重要限制】
+- 不要重新抽牌
+- 不要新增任何牌名、牌義、正逆位
+- 這是「總結與轉化」，不是再次分析
+
+請在這一則回覆中完成「占卜 → 理解」的轉換。
+""".strip()
+
+CHAT_REFLECT_TAROT_FOLLOWUP_PROMPT = """
+你是一位正在延續「占卜後對話」的陪伴者。
+
+【背景】
+- 占卜內容已經說明並討論過
+- 使用者現在是在延伸想法、詢問建議，或表達感受
+
+【你的任務】
+- 不需要再解釋或回顧占卜內容
+- 專注回應使用者「當下這一句話」的需求
+- 將重點放在行動、選擇、關係互動或內在感受上
+
+【說話方式】
+- 像一個理解對方處境的人在對話
+- 可以給建議、提問、或陪伴情緒
+- 回答要自然往前推進，不要倒回解牌
+- 以聊天的方式進行互動，不要變成講座，也不要變成占卜分析
+- 話語盡量輕鬆，避免過於正式或嚴肅，讓對話更有溫度
+
+【嚴格禁止】
+- 重複說明占卜結果
+- 再次整理或總結那次占卜
+- 使用「這次占卜告訴你……」作為開頭
+
+請假設「占卜已經是過去式」，現在是在消化與前進。
+""".strip()
 # =========================================================
 # JSON 儲存（依 session 存）
 # =========================================================
+from datetime import datetime
 
-def save_conversation(session_id: str, conversation: list):
-    filename = f"{session_id}.json"
-    path = os.path.join(JSON_FOLDER, filename)
+def get_time_based_filename(base_dir: str, ext: str = ".json") -> str:
+    """
+    產生檔名格式：
+    YYYY-MM-DD_HH-MM-SS.json
+    例如：2026-01-01_18-42-07.json
+    """
+    now = datetime.now()
+
+    timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{timestamp}{ext}"
+
+    os.makedirs(base_dir, exist_ok=True)
+    return os.path.join(base_dir, filename)
+
+def save_conversation(conversation: list):
+    path = get_time_based_filename(JSON_FOLDER)
+
     with open(path, "w", encoding="utf-8") as f:
         json.dump(conversation, f, ensure_ascii=False, indent=2)
+
     return path
 
 # =========================================================
@@ -110,7 +178,8 @@ def get_session(session_id: Optional[str]):
         session_id = uuid.uuid4().hex
         sessions[session_id] = {
             "state": "chat",
-            "conversation": []
+            "conversation": [],
+            "tarot_first_reply_done": False
         }
     return session_id, sessions[session_id]
 
@@ -134,28 +203,54 @@ def normal_chat():
     # === 使用者按下「開始提問」===
     if user_input == "__START_QUESTION__":
         session["state"] = "awaiting_question"
+        session["tarot_first_reply_done"] = False  # ⭐ 重設
         conversation.append({
             "role": "system",
             "content": "使用者進入占卜提問階段"
         })
 
-        saved_path = save_conversation(session_id, conversation)
+        saved_path = save_conversation(conversation)
         result["awaiting_question"] = True
         return jsonify(result)
-
+    # === 注入占卜摘要至聊天上下文 ===
+    if user_input.startswith("__INJECT_TAROT_CONTEXT__:"):
+        summary = user_input.replace("__INJECT_TAROT_CONTEXT__:", "").strip()
+        conversation.append({
+            "role": "system",
+            "content": "【系統狀態】以下對話已進入『占卜後回顧聊天模式』，請承認先前占卜已發生。"
+        })
+        conversation.append({
+            "role": "system",
+            "content": f"【占卜摘要】\n{summary}"
+        })
+        session["state"] = "chat_reflect_tarot"
+        return jsonify({
+            "reply": "",
+            "session_id": session_id,
+            "awaiting_question": False
+        })
     # === 輸入占卜問題 ===
     if awaiting_question:
         conversation.append({"role": "user", "content": user_input})
-        saved_path = save_conversation(session_id, conversation)
+        saved_path = save_conversation(conversation)
         session["state"] = "chat"
         result["awaiting_question"] = False
         result["saved_path"] = saved_path
         return jsonify(result)
 
-    # === 一般聊天 ===
+    # === 一般 / 占卜後聊天 ===
     conversation.append({"role": "user", "content": user_input})
 
-    prompt = CHAT_MODE_PROMPT + "\n\n"
+    if session["state"] == "chat_reflect_tarot":
+        if not session.get("tarot_first_reply_done", False):
+            base_prompt = CHAT_REFLECT_TAROT_FIRST_PROMPT
+            session["tarot_first_reply_done"] = True
+        else:
+            base_prompt = CHAT_REFLECT_TAROT_FOLLOWUP_PROMPT
+    else:
+        base_prompt = CHAT_MODE_PROMPT
+
+    prompt = base_prompt + "\n\n"
     for msg in conversation:
         prompt += f"{msg['role']}：{msg['content']}\n"
 

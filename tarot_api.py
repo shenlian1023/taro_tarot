@@ -41,6 +41,21 @@ TOKENS_ACTIONS = 220
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # ================= 工具 =================
+from datetime import datetime
+
+def get_time_based_filename(base_dir: str, ext: str = ".json") -> str:
+    """
+    產生檔名格式：
+    YYYY-MM-DD_HH-MM-SS.json
+    例如：2026-01-01_18-42-07.json
+    """
+    now = datetime.now()
+
+    timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{timestamp}{ext}"
+
+    os.makedirs(base_dir, exist_ok=True)
+    return os.path.join(base_dir, filename)
 
 def load_api_key() -> Optional[str]:
     if not os.path.exists(API_KEY_FILE):
@@ -160,6 +175,17 @@ def format_history_for_rag(history_messages: List[Dict[str, Any]], tail: int = H
         lines.append(f"{role}: {content}")
     return "\n".join(lines)
 
+def build_chat_summary(dialogue: list, actions: list) -> str:
+    key_points = dialogue[:2]  # 只取前 1~2 句核心解讀
+    action_points = actions[:2]
+
+    lines = []
+    for s in key_points:
+        lines.append(f"- {s}")
+    for a in action_points:
+        lines.append(f"- 行動提醒：{a}")
+
+    return "本次占卜重點如下：\n" + "\n".join(lines)
 # ================= 抽牌 =================
 
 def random_draw_three(db: List[Dict[str, Any]]) -> List[Dict[str, str]]:
@@ -321,10 +347,12 @@ def generate_dialogue(question: str, cards: List[Dict[str, Any]], session_id: st
 
 # ================= 輸出 JSON =================
 
-def save_result_json(result: Dict[str, Any], session_id: str):
-    path = os.path.join(OUTPUT_FOLDER, f"{session_id}.json")
+def save_result_json(result: Dict[str, Any]):
+    path = get_time_based_filename(OUTPUT_FOLDER)
+
     with open(path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
+
     print(f"📄 已輸出占卜結果：{path}")
     return path
 
@@ -410,13 +438,14 @@ def analyze_tarot():
         result = generate_dialogue(question, cards, session_id)
 
         # 儲存占卜結果（與聊天共用 session_id）
-        saved_path = save_result_json(result, session_id)
+        saved_path = save_result_json(result)
 
         full_messages = result.get("dialogue", []) + result.get("actions", [])
-
+        summary = build_chat_summary(result.get("dialogue", []), result.get("actions", []))
         return jsonify({
             "session_id": session_id,
             "messages": full_messages,
+            "summary": summary,
             "saved_path": saved_path
         })
 

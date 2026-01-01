@@ -421,7 +421,7 @@
       display: none;
       justify-content: center;
       align-items: center;
-      z-index: 9999;
+      z-index: 8;
       opacity: 0;
       transition: opacity 0.6s ease;
     }
@@ -430,7 +430,185 @@
       display: flex;
       opacity: 1;
     }
+    #return-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #0b0b1a 0%, #000 70%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
 
+    #return-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .vortex {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      animation: vortexRotate 8s linear infinite;
+      z-index: 3;
+    }
+    @keyframes vortexRotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .blackhole {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #000 60%, #4b116f 80%, transparent 90%);
+      box-shadow:
+        0 0 60px rgba(180,120,255,0.6),
+        0 0 120px rgba(120,50,200,0.4);
+      z-index: 3;
+    }
+    .stars {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        repeating-conic-gradient(
+          from 0deg,
+          rgba(255,255,255,0.15) 0deg,
+          rgba(255,255,255,0.05) 10deg,
+          transparent 20deg
+        );
+      filter: blur(1px);
+      animation: starsPulse 3s ease-in-out infinite;
+    }
+    @keyframes starsPulse {
+      0%   { opacity: 0.6; transform: scale(1); }
+      50%  { opacity: 1;   transform: scale(1.05); }
+      100% { opacity: 0.6; transform: scale(1); }
+    }
+
+    .return-text {
+      margin-top: 40px;
+      font-size: 28px;              /* ⭐ 字變大 */
+      letter-spacing: 6px;
+      color: #fff;                  /* ⭐ 純白 */
+      opacity: 0.9;
+      animation: textBreath 2.5s ease-in-out infinite;
+      z-index: 4;
+    }
+
+    .particle-field {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10; /* ⭐ 一定要比 vortex 高 */
+    }
+
+    .particle-field span {
+      width: 10px;                 /* ⭐ 稍微變大 */
+      height: 10px;
+      position: absolute;
+      top: -10%;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+      background: radial-gradient(
+        circle,
+        #fff 0%,
+        rgba(255,255,255,0.6) 40%,
+        transparent 70%
+      );
+      box-shadow: 0 0 6px rgba(255,255,255,0.8);
+      opacity: 0.9;
+    }
+    .particle-field span:nth-child(odd) {
+      animation-name: particleFallLeft;
+    }
+
+    .particle-field span:nth-child(even) {
+      animation-name: particleFallRight;
+    }
+
+    @keyframes particleFallLeft {
+      100% { transform: translate(-220px, 180px) scale(0); }
+    }
+
+    @keyframes particleFallRight {
+      100% { transform: translate(-160px, 220px) scale(0); }
+    }
+
+    .particle-field span:nth-child(1)  { left: 10%; animation-duration: 15s; animation-delay: 0s; }
+    .particle-field span:nth-child(2)  { left: 25%; animation-duration: 23s; animation-delay: 1s; }
+    .particle-field span:nth-child(3)  { left: 40%; animation-duration: 13s; animation-delay: 2s; }
+    .particle-field span:nth-child(4)  { left: 55%; animation-duration: 11s; animation-delay: 0.5s; }
+    .particle-field span:nth-child(5)  { left: 70%; animation-duration: 17s; animation-delay: 1.8s; }
+    .particle-field span:nth-child(6)  { left: 85%; animation-duration: 10s; animation-delay: 0.2s; }
+    .particle-field span:nth-child(7)  { left: 15%; animation-duration: 12s; animation-delay: 2.5s; }
+    .particle-field span:nth-child(8)  { left: 30%; animation-duration: 18s; animation-delay: 1.1s; }
+    .particle-field span:nth-child(9)  { left: 50%; animation-duration: 15s; animation-delay: 0.7s; }
+    .particle-field span:nth-child(10) { left: 75%; animation-duration: 11s; animation-delay: 1.3s; }
+    /* …你可以自己再複製幾行 */
+    
+    .vortex::after {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      border-radius: 50%;
+      border: 4px solid rgba(180,120,255,0.1);
+      animation: ripple 5s ease-out infinite;
+    }
+
+    @keyframes ripple {
+      from { transform: scale(0.8); opacity: 0.4; }
+      to   { transform: scale(1.3); opacity: 0; }
+    }
+    .blackhole {
+      animation: pulseGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%,100% { box-shadow: 0 0 40px rgba(180,120,255,0.4); }
+      50%     { box-shadow: 0 0 80px rgba(200,150,255,0.7); }
+    }
+    .space-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 40%, rgba(120,80,200,0.15), transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(80,40,160,0.1), transparent 60%);
+      animation: nebulaMove 30s linear infinite;
+      z-index: 1;
+    }
+
+    @keyframes nebulaMove {
+      from { background-position: 0 0; }
+      to   { background-position: 0 -400px; }
+    }
+    @keyframes textBreath {
+      0%   { opacity: 0.4; }
+      50%  { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+    .spiral {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        conic-gradient(
+          from 0deg,
+          rgba(180,120,255,0.25),
+          rgba(100,50,200,0.05),
+          rgba(180,120,255,0.25)
+        );
+      filter: blur(2px);
+      animation: spiralIn 3s linear infinite;
+    }
+    @keyframes spiralIn {
+      0%   { transform: rotate(0deg) scale(1); opacity: 0.6; }
+      100% { transform: rotate(360deg) scale(0.7); opacity: 0; }
+    }
     .transition-content {
       text-align: center;
       color: #e6d5ff;
@@ -474,6 +652,22 @@
 
 <!-- 畫面左邊放牌 -->
 <div id="card-container"></div>
+<!-- 返回動畫遮罩 -->
+<div id="return-overlay">
+  <div class="space-bg"></div>
+  <!-- 粒子效果 -->
+  <div class="particle-field">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <div class="vortex">
+    <div class="spiral"></div>
+    <div class="blackhole"></div>
+  </div>
+
+  <div class="return-text">命運演算中</div>
+</div>
 
 <!-- 聊天室 -->
 <div id="chat-container">
@@ -498,6 +692,7 @@
 <button id="back-button">返回聊天</button>
 
 <script>
+let lockScroll = false;
 let sessionId = null;
 // 創建星空
 function createStarfield() {
@@ -550,6 +745,15 @@ const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const startQuestionBtn = document.getElementById('start-question-btn');
 const transitionOverlay = document.getElementById('transition-overlay');
+const returnOverlay = document.getElementById("return-overlay");
+
+function showReturnOverlay() {
+  returnOverlay.classList.add("active");
+}
+
+function hideReturnOverlay() {
+  returnOverlay.classList.remove("active");
+}
 
 let questionMode = false; // 是否進入提問模式
 let userQuestion = '';
@@ -559,11 +763,34 @@ async function appendMessageWithDelay(role, text, delay = 0) {
   if (delay > 0) {
     await new Promise(r => setTimeout(r, delay));
   }
+
   const msgDiv = document.createElement('div');
   msgDiv.className = `message ${role}`;
   msgDiv.innerText = text;
   msgContainer.appendChild(msgDiv);
-  msgContainer.scrollTop = msgContainer.scrollHeight;
+
+  // ⭐ 如果鎖定捲動，就完全不動
+  if (lockScroll) return;
+  else {
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+  }
+}
+function restoreChatUI() {
+  // 顯示開始提問按鈕
+  startQuestionBtn.style.display = "inline-block";
+
+  // 確保輸入框是可用的
+  userInput.disabled = false;
+  sendBtn.disabled = false;
+
+  // placeholder 回到聊天語意
+  userInput.placeholder = "想聊什麼都可以…";
+
+  // 關掉任何占卜相關 flag
+  questionMode = false;
+
+  // 如果你有鎖 scroll，也順便解
+  lockScroll = false;
 }
 
 // Ollama
@@ -601,37 +828,43 @@ async function callNormalAI(text) {
 
 // 塔羅占卜的 AI 回應
 async function callTarotAI(text, cards, orientations) {
-
   try {
     const response = await fetch('http://localhost:5005/analyze_tarot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-      session_id: sessionId,
-      question: text,
-      card_ids: cards,
-      orientations: orientations
-    })
+        session_id: sessionId,
+        question: text,
+        card_ids: cards,
+        orientations: orientations
+      })
     });
-
 
     if (!response.ok) throw new Error("伺服器回應異常");
 
     const data = await response.json();
-    
+
+    // 1️⃣ 顯示占卜訊息
     if (data.messages && data.messages.length > 0) {
       for (const msg of data.messages) {
         await appendMessageWithDelay('ai', msg, 1200);
       }
     }
 
-    return "占卜結束。";
+    // 2️⃣ ⭐ 只回傳 summary，不在這裡注入
+    return data.summary || null;
+
   } catch (error) {
     console.error("API 連線失敗:", error);
-    appendMessageWithDelay('ai', "能量感應失敗,請確認後端伺服器已啟動。", 0);
-    return false;
+    await appendMessageWithDelay(
+      'ai',
+      "能量感應失敗，請確認後端伺服器已啟動。",
+      0
+    );
+    return null;
   }
 }
+
 
 // 開始提問按鈕
 startQuestionBtn.addEventListener('click', async () => {
@@ -639,7 +872,8 @@ startQuestionBtn.addEventListener('click', async () => {
   
   questionMode = true;
   startQuestionBtn.style.display = 'none';
-
+  userInput.disabled = true;
+  sendBtn.disabled = true;
   const respText = await callNormalAI("__START_QUESTION__");
   // 顯示介紹訊息
   await appendMessageWithDelay('ai', '很好,讓我們進入正式的塔羅占卜。', 500);
@@ -649,6 +883,8 @@ startQuestionBtn.addEventListener('click', async () => {
   await appendMessageWithDelay('ai', '現在,請告訴我你的問題吧～', 1000);
   
   userInput.placeholder = '請輸入你想詢問的問題...';
+  userInput.disabled = false;
+  sendBtn.disabled = false;
   userInput.focus();
 });
 
@@ -680,7 +916,15 @@ sendBtn.addEventListener('click', async () => {
         tableFrame.style.display = 'block';
         backBtn.style.display = 'block';
         cardContainer.innerHTML = '';
-        
+         // ⭐ 新增：等待 iframe 載入後傳送資料
+        tableFrame.onload = function() {
+          tableFrame.contentWindow.postMessage({
+            type: 'init_data',
+            session_id: sessionId,
+            question: userQuestion
+          }, '*');
+          console.log('已傳送資料給 iframe:', { session_id: sessionId, question: userQuestion });
+        };
         // 淡出轉場
         setTimeout(() => {
           transitionOverlay.classList.remove('active');
@@ -890,39 +1134,35 @@ async function displayCards(cards, orientations) {
 window.addEventListener('message', async (event) => {
   if (event.data.type !== 'analysis_complete') return;
 
-  const cards = event.data.cards;
-  const orientations = event.data.orientations;
+  const { cards, orientations } = event.data;
 
   try {
-    // 隱藏 iframe
     tableFrame.style.display = 'none';
     backBtn.style.display = 'none';
     chat.style.display = 'flex';
 
-    // 顯示選中的卡牌
     if (cards.length > 0) {
       displayCards(cards, orientations);
     }
 
-    // 開始塔羅分析
-    await callTarotAI(userQuestion, cards, orientations);
+    lockScroll = true;
 
-    // 告知後端占卜結束
-    await fetch("http://localhost:8001/end_divination", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId })
-    });
+    // ⭐【關鍵】接住 callTarotAI 回傳的 summary
+    showReturnOverlay();
+    const summary = await callTarotAI(userQuestion, cards, orientations);
+    hideReturnOverlay();
 
-  } catch (err) {
-    console.error("analysis_complete 發生錯誤", err);
+    lockScroll = false;
+
+    // ⭐【唯一一次】在這裡注入聊天上下文
+    if (summary) {
+      await callNormalAI("__INJECT_TAROT_CONTEXT__:" + summary);
+    }
+
   } finally {
-    questionMode = false;
-    userQuestion = '';
-    userInput.disabled = false;
-    sendBtn.disabled = false;
-    userInput.placeholder = '還有其他想問的嗎?';
-    userInput.focus();
+    // ✅ 不要再動 transitionOverlay
+    hideReturnOverlay(); // 保險：避免例外時卡住
+    restoreChatUI();
   }
 });
 
