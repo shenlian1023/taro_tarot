@@ -21,6 +21,9 @@
 
 ---
 
+## 系統狀態圖 FSM
+![Demo Screenshot](FSM.png)
+
 ## 使用技術與工具
 ### 後端
 - Python 3
