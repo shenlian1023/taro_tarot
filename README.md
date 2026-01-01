@@ -22,18 +22,18 @@
 ---
 
 ## 使用技術與工具
-###後端
+### 後端
 - Python 3
 - Flask
 - Flask-CORS
 - Threading（同時啟動多個服務）
 
-###前端
+### 前端
 - HTML / CSS / JavaScript
 - Fetch API（與後端溝通）
 - 前端動畫與互動效果
 
-###AI / LLM
+### AI / LLM
 - 模型：gemma3:4b
 - API：校內 API Gateway
 - 使用 Prompt Engineering 控制占卜語氣與結構
@@ -105,10 +105,10 @@ run.bat
 ### 占卜結果
 - 儲存在 outputs/{session_id}.json
 - 包含：
-- - 問題內容
-- - 抽到的三張牌（含正逆位）
-- - 完整占卜對話
-- - 結論建議
+ - 問題內容
+ - 抽到的三張牌（含正逆位）
+ - 完整占卜對話
+ - 結論建議
 ---
 
 ## 注意事項
@@ -116,5 +116,5 @@ run.bat
 - 不提供醫療、法律或人生保證
 - API 金鑰請勿上傳至公開平台
 - 若畫面無回應，請確認：
-- - Port 8001 / 5005 未被佔用
-- - API 金鑰有效
+ - Port 8001 / 5005 未被佔用
+ - API 金鑰有效
