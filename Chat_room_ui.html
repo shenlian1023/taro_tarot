@@ -944,7 +944,6 @@ sendBtn.addEventListener('click', async () => {
         chat.style.display = 'none';
         tableFrame.src = 'Draw_cards_ui.html';
         tableFrame.style.display = 'block';
-        backBtn.style.display = 'block';
         cardContainer.innerHTML = '';
          // ⭐ 新增：等待 iframe 載入後傳送資料
         tableFrame.onload = function() {
@@ -1168,7 +1167,6 @@ window.addEventListener('message', async (event) => {
 
   try {
     tableFrame.style.display = 'none';
-    backBtn.style.display = 'none';
     chat.style.display = 'flex';
 
     if (cards.length > 0) {
@@ -1198,39 +1196,6 @@ window.addEventListener('message', async (event) => {
 
 // 初始化
 loadTarotData();
-
-backBtn.addEventListener('click', () => {
-  try {
-    const iframeWindow = tableFrame.contentWindow;
-    const selectedCards = iframeWindow.selectedCards || [];
-    const selectedOrientations = iframeWindow.selectedOrientations || [];
-
-    if (selectedCards.length > 0) {
-      displayCards(selectedCards, selectedOrientations);
-    }
-  } catch (e) {
-    console.error("無法從 iframe 讀取資料", e);
-  }
-
-  // tableFrame.style.display = 'none';
-  // backBtn.style.display = 'none';
-  // chat.style.display = 'flex';
-  
-  // // 重新啟用輸入
-  // userInput.disabled = false;
-  // sendBtn.disabled = false;
-
-  tableFrame.style.display = 'none';
-  backBtn.style.display = 'none';
-  chat.style.display = 'flex';
-  
-  userInput.disabled = false;
-  sendBtn.disabled = false;
-
-  // --- 關鍵修改：確保返回後按鈕會出現，且重置模式 ---
-  questionMode = false;
-  startQuestionBtn.style.display = 'block';
-});
 </script>
 
 </body>
