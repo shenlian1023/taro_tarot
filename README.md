@@ -90,7 +90,7 @@ conda activate tarot_venv
 ```
 4. 執行run.bat
 ```bash
-.\run.bat
+run.bat
 ```
 ---
 
