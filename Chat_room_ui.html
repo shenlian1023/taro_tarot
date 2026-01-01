@@ -491,7 +491,7 @@
 </div>
 
 <!-- 開始提問按鈕 -->
-<button id="start-question-btn">開始提問</button>
+<button id="start-question-btn" type="button">開始提問</button>
 
 <!-- 全螢幕 Table.html -->
 <iframe id="tableFrame" src=""></iframe>
@@ -635,20 +635,53 @@ async function callTarotAI(text, cards, orientations) {
 
 // 開始提問按鈕
 startQuestionBtn.addEventListener('click', async () => {
-  if (questionMode) return;
+  // if (questionMode) return;
   
+  // questionMode = true;
+  // startQuestionBtn.style.display = 'none';
+
+  // const respText = await callNormalAI("__START_QUESTION__");
+  // // 顯示介紹訊息
+  // await appendMessageWithDelay('ai', '很好,讓我們進入正式的塔羅占卜。', 500);
+  // await appendMessageWithDelay('ai', '📝 首先,請在下方輸入你想詢問的問題', 1000);
+  // await appendMessageWithDelay('ai', '🎴 接著,你將從78張塔羅牌中憑直覺選擇三張牌', 1000);
+  // await appendMessageWithDelay('ai', '✨ 最後,我會根據你選擇的牌為你解讀命運的啟示', 1000);
+  // await appendMessageWithDelay('ai', '現在,請告訴我你的問題吧～', 1000);
+  
+  // userInput.placeholder = '請輸入你想詢問的問題...';
+  // userInput.focus();
+
+  // 1. 判斷是否為「重新提問」
+  const isReasking = startQuestionBtn.innerText === '重新提問';
+
+  // 2. 進入提問模式並隱藏按鈕
   questionMode = true;
   startQuestionBtn.style.display = 'none';
 
-  const respText = await callNormalAI("__START_QUESTION__");
-  // 顯示介紹訊息
-  await appendMessageWithDelay('ai', '很好,讓我們進入正式的塔羅占卜。', 500);
-  await appendMessageWithDelay('ai', '📝 首先,請在下方輸入你想詢問的問題', 1000);
-  await appendMessageWithDelay('ai', '🎴 接著,你將從78張塔羅牌中憑直覺選擇三張牌', 1000);
-  await appendMessageWithDelay('ai', '✨ 最後,我會根據你選擇的牌為你解讀命運的啟示', 1000);
-  await appendMessageWithDelay('ai', '現在,請告訴我你的問題吧～', 1000);
+  // 3. 清空左側舊卡牌
+  cardContainer.innerHTML = '';
   
+  // 4. 呼叫後端重置狀態
+  await callNormalAI("__START_QUESTION__");
+
+  // 5. 根據次數顯示不同的引導訊息
+  if (!isReasking) {
+    // --- 第一次提問的對話 ---
+    await appendMessageWithDelay('ai', '很好，讓我們進入正式的塔羅占卜。', 500);
+    await appendMessageWithDelay('ai', '📝 首先，請在下方輸入你想詢問的問題', 1000);
+    await appendMessageWithDelay('ai', '🎴 接著，你將從78張塔羅牌中憑直覺選擇三張牌', 1000);
+    await appendMessageWithDelay('ai', '✨ 最後，我會根據你選擇的牌為你解讀命運的啟示', 1000);
+    await appendMessageWithDelay('ai', '現在，請告訴我你的問題吧～', 1000);
+  } else {
+    // --- 第二次以後（重新提問）的對話 ---
+    await appendMessageWithDelay('ai', '很好，讓我們再次開啟星辰的對話。', 500);
+    await appendMessageWithDelay('ai', '📝 請告訴我你新的困惑或問題...', 1000);
+  }
+  
+  // 6. 恢復輸入框狀態
   userInput.placeholder = '請輸入你想詢問的問題...';
+  userInput.disabled = false;
+  sendBtn.disabled = false;
   userInput.focus();
 });
 
@@ -914,14 +947,40 @@ window.addEventListener('message', async (event) => {
       body: JSON.stringify({ session_id: sessionId })
     });
 
+  // } catch (err) {
+  //   console.error("analysis_complete 發生錯誤", err);
+  // } finally {
+  //   questionMode = false;
+  //   userQuestion = '';
+  //   userInput.disabled = false;
+  //   sendBtn.disabled = false;
+  //   userInput.placeholder = '還有其他想問的嗎?';
+  //   userInput.focus();
+  // }
   } catch (err) {
     console.error("analysis_complete 發生錯誤", err);
   } finally {
+    // questionMode = false;
+    // userQuestion = '';
+    // userInput.disabled = false;
+    // sendBtn.disabled = false;
+    // userInput.placeholder = '還有其他想問的嗎?';
+    
+    // // --- 關鍵修改：重新顯示按鈕並更新文字 ---
+    // startQuestionBtn.innerText = '重新提問';
+    // startQuestionBtn.style.display = 'block'; 
+    // // ------------------------------------
+    
     questionMode = false;
     userQuestion = '';
     userInput.disabled = false;
     sendBtn.disabled = false;
     userInput.placeholder = '還有其他想問的嗎?';
+    
+    // 這裡一定要改文字，下一次點擊才會走「再次開啟」的邏輯
+    startQuestionBtn.innerText = '重新提問'; 
+    startQuestionBtn.style.display = 'block'; 
+    
     userInput.focus();
   }
 });
@@ -942,13 +1001,24 @@ backBtn.addEventListener('click', () => {
     console.error("無法從 iframe 讀取資料", e);
   }
 
+  // tableFrame.style.display = 'none';
+  // backBtn.style.display = 'none';
+  // chat.style.display = 'flex';
+  
+  // // 重新啟用輸入
+  // userInput.disabled = false;
+  // sendBtn.disabled = false;
+
   tableFrame.style.display = 'none';
   backBtn.style.display = 'none';
   chat.style.display = 'flex';
   
-  // 重新啟用輸入
   userInput.disabled = false;
   sendBtn.disabled = false;
+
+  // --- 關鍵修改：確保返回後按鈕會出現，且重置模式 ---
+  questionMode = false;
+  startQuestionBtn.style.display = 'block';
 });
 </script>
 
