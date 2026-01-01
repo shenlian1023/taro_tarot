@@ -84,18 +84,17 @@ pip install flask flask-cors
 ---
 
 ## 啟動方式
-1. 打開anaconda prompt
-2. 移動到專案所在資料夾位置
+1. 到正確的資料夾
 ```bash
 cd C:\Tarot_Final_Project\taro_tarot
 ```
-3. 開啟虛擬環境
+2. 確保使用環境內有flask相關套件
 ```bash
-conda activate tarot_venv
+pip install flask flask-cors
 ```
 4. 執行run.bat
 ```bash
-run.bat
+./run.bat
 ```
 ---
 
